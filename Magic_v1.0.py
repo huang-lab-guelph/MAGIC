@@ -11,6 +11,14 @@ import shutil
 import resource
 import psutil
 from random import shuffle
+from scipy.spatial.distance import cdist
+from collections import Counter
+
+# Pre-compile regex patterns for performance
+RESIDUE_PATTERN = re.compile(r'[A-Z]([0-9]+)[A-Z]')
+NAME_PATTERN = re.compile(r'[0-9]+(\w+)')
+RESIDUE_SIMPLE = re.compile(r'([A-Z])([0-9]+)')
+ATOM_NAME_PATTERN = re.compile(r'[A-Z]([0-9]+)([A-Z]+[0-9]*)')
 
 class obj:
   pass
@@ -76,50 +84,78 @@ def distances(pdb,Cutoff,lowCut,flag):
   if peak_geminal.sum()==0:flag_no_pairs=1
   else:flag_no_pairs=0
   
-  for linei in Atomlist:
-    spliti=linei.split()
-    xi=float(spliti[6])
-    yi=float(spliti[7])
-    zi=float(spliti[8])
-    for aa in convert:
-      if spliti[3]==aa[0]: Res_name=aa[1]
-    if spliti[2]!='H': Methyl_list.append(Res_name+spliti[5]+spliti[2])  
-    for linef in Atomlist:
-      splitf=linef.split()
-      xf=float(splitf[6])
-      yf=float(splitf[7])
-      zf=float(splitf[8])
-      if (xf!=xi or yf!=yi or zf!=zi):
-        d=round(math.pow(math.pow(xf-xi,2)+math.pow(yf-yi,2)+math.pow(zf-zi,2),0.5),1)
-        if (spliti[2]!='H' and splitf[2]!='H'): # CCH
-            
-            ##############Relax cutoff and lowCut if conformation changes#########
-            Cutoff2=Cutoff
-            lowCut2=lowCut
-            flag_confchange=0
-            for area in areas:
-              if (int(spliti[5])>=int(area[0]) and int(spliti[5])<=int(area[1])):flag_confchange=1
-            if flag_confchange==1:
-              Cutoff2=Cutoff+2  
-              lowCut2=lowCut+2
-            #######################################################################
-              
-            if (d<=lowCut2 and spliti[5]!=splitf[5]):coef=1
-            elif d>lowCut2 and d<=Cutoff2:coef=(Cutoff2-d)/float(Cutoff2-lowCut2)
-            elif (flag_geminal==1 and spliti[5]==splitf[5]):
-              if flag_no_pairs==1:coef=1.2
-              else: coef=1
-            elif (flag_geminal==0 and spliti[5]==splitf[5]):coef=0
-            else:coef=0
-            for line in convert:
-              if spliti[3]==line[0]:Res_name_i=line[1]
-              if splitf[3]==line[0]:Res_name_f=line[1]         
-            if flag=='run':
-              distances_CHCH.append([str(Res_name_i+spliti[5]+spliti[2]),
-                                     str(Res_name_f+splitf[5]+splitf[2]),coef])
-              #if coef!=0:methyl_file.write(str(distances_CHCH[-1])+'\n')
-            elif flag=='histo':distances_CHCH.append([str(Res_name_i+spliti[5]+spliti[2]),
-                                                      str(Res_name_f+splitf[5]+splitf[2]),d])
+  # OPTIMIZED: Pre-parse all atom data and create lookup dictionary
+  convert_dict = dict(convert)
+  parsed_atoms = []
+  for line in Atomlist:
+    split = line.split()
+    parsed_atoms.append({
+      'line': line,
+      'coords': np.array([float(split[6]), float(split[7]), float(split[8])]),
+      'atom_type': split[2],
+      'res_type': split[3],
+      'res_num': split[5],
+      'res_name': convert_dict.get(split[3], '?')
+    })
+
+  # Build Methyl_list
+  for atom in parsed_atoms:
+    if atom['atom_type'] != 'H':
+      Methyl_list.append(atom['res_name'] + atom['res_num'] + atom['atom_type'])
+
+  # OPTIMIZED: Vectorized distance calculation using cdist
+  coords_array = np.array([atom['coords'] for atom in parsed_atoms])
+  distance_matrix = cdist(coords_array, coords_array, metric='euclidean')
+  distance_matrix = np.round(distance_matrix, 1)
+
+  # Process all pairs
+  n_atoms = len(parsed_atoms)
+  for i in range(n_atoms):
+    atomi = parsed_atoms[i]
+    if atomi['atom_type'] == 'H':
+      continue
+
+    for j in range(n_atoms):
+      atomf = parsed_atoms[j]
+      if atomf['atom_type'] == 'H' or i == j:
+        continue
+
+      d = distance_matrix[i, j]
+
+      ##############Relax cutoff and lowCut if conformation changes#########
+      Cutoff2 = Cutoff
+      lowCut2 = lowCut
+      flag_confchange = 0
+      res_num_i = int(atomi['res_num'])
+      for area in areas:
+        if int(area[0]) <= res_num_i <= int(area[1]):
+          flag_confchange = 1
+          break
+      if flag_confchange == 1:
+        Cutoff2 = Cutoff + 2
+        lowCut2 = lowCut + 2
+      #######################################################################
+
+      # Calculate coefficient
+      if d <= lowCut2 and atomi['res_num'] != atomf['res_num']:
+        coef = 1
+      elif lowCut2 < d <= Cutoff2:
+        coef = (Cutoff2 - d) / float(Cutoff2 - lowCut2)
+      elif flag_geminal == 1 and atomi['res_num'] == atomf['res_num']:
+        coef = 1.2 if flag_no_pairs == 1 else 1
+      elif flag_geminal == 0 and atomi['res_num'] == atomf['res_num']:
+        coef = 0
+      else:
+        coef = 0
+
+      # Build result
+      name_i = atomi['res_name'] + atomi['res_num'] + atomi['atom_type']
+      name_f = atomf['res_name'] + atomf['res_num'] + atomf['atom_type']
+
+      if flag == 'run':
+        distances_CHCH.append([str(name_i), str(name_f), coef])
+      elif flag == 'histo':
+        distances_CHCH.append([str(name_i), str(name_f), d])
   #if flag=='run':methyl_file=open('./'+str(Time_start).split('.')[0]+'/Methyl_connectivity','w')
   distances_CHCH_new=[]
   for line in distances_CHCH:
@@ -165,10 +201,9 @@ def Extract_3DPeaks(object, peak_list_3d, peak_list_2d_CH, nuclei, tolerance):
   DistNOE.append(len(peak_list_3d))
   DistNOE.append(mean_intensity)
   DistNOE.append(NOE_std)
-  file_log=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/log', 'a')
-  file_log.write('Number of NOEs: '+str(len(peak_list_3d))+'\n')
-  file_log.write('NOEs per strip: '+str(round(len(peak_list_3d)/float(len(peak_list_2d_CH)),2))+'\n')
-  file_log.close()
+  with open(LOG_FILE, 'a') as file_log:
+    file_log.write('Number of NOEs: '+str(len(peak_list_3d))+'\n')
+    file_log.write('NOEs per strip: '+str(round(len(peak_list_3d)/float(len(peak_list_2d_CH)),2))+'\n')
   for line_hmqc in peak_list_2d_ref:
       split_hmqc=line_hmqc.split()
       w=float(split_hmqc[1])
@@ -233,7 +268,7 @@ def noe2matrix(result,factors,flag_cchlist):
     Noe_correlations_clustering=[]
     Noe_correlations_scoring=[]
     HMQC_peak_list=[]
-    if flag_cchlist==0:noe_network=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/Peak_connectivity', 'w')
+    if flag_cchlist==0:noe_network=open('{}/Peak_connectivity'.format(BASE_DIR), 'w')
     overlap_list=[]
     overlap_topo=[]
     RiskyPeak=[]
@@ -284,42 +319,85 @@ def noe2matrix(result,factors,flag_cchlist):
            if total_height_i>0:rimax=float(imax/total_height_i)
            height_i2mean=round(float(total_height_i)/DistNOE[0], 2)
        except AttributeError: pass
-       if not str(linei_split[0]) in list(biblio_crosspeaks.keys()):biblio_crosspeaks[str(linei_split[0])]={}     
+       # OPTIMIZED: Direct dictionary membership test
+       if str(linei_split[0]) not in biblio_crosspeaks:biblio_crosspeaks[str(linei_split[0])]={}     
        if noe_peaki_list:
-         counter=0     
+         counter=0
+         # OPTIMIZED: Pre-parse and cache all HMQC splits
+         hmqc_parsed = []
+         for linef in HMQC:
+           linef_split = linef.split()
+           hmqc_parsed.append({
+             'name': linef_split[0],
+             'freq1': float(linef_split[1]),
+             'freq2': float(linef_split[2]),
+             'noe_list': None
+           })
+
+         # Pre-parse noe_peaki_list
+         noe_peaki_parsed = []
          for noe_peaki in noe_peaki_list:
-             noe_peaki_split=noe_peaki.split()
-             ri=round(float(noe_peaki_split[4])/total_height_i, 2)
-             ri2max=round(float(noe_peaki_split[4])/DistNOE[1],3)    
+           noe_peaki_split = noe_peaki.split()
+           noe_peaki_parsed.append({
+             'split': noe_peaki_split,
+             'freq1': float(noe_peaki_split[1]),
+             'height': float(noe_peaki_split[4])
+           })
+
+         for noe_peaki_data in noe_peaki_parsed:
+             noe_peaki_split = noe_peaki_data['split']
+             ri=round(noe_peaki_data['height']/total_height_i, 2)
+             ri2max=round(noe_peaki_data['height']/DistNOE[1],3)
              peak_neighbors_clustering=[]
              peak_neighbors_scoring=[]
              shared_peak_neighbors=0
-             for linef in HMQC:
-                 linef_split=linef.split()
-                 if ((float(noe_peaki_split[1])>(float(linef_split[1])-ppm_range[0])) and 
-                     (float(noe_peaki_split[1])<(float(linef_split[1])+ppm_range[0]))):
-                   shared_peak_neighbors=0
-                   sym=sym_coef
-                   ppm_matching=[0.035,0.035]
-                   ppm_matching[0]=float(noe_peaki_split[1])-float(linef_split[1])
-                   try:
-                     noe_peakf_list=getattr(result, str(linef_split[0])+'_3dpeaks')
-                   except AttributeError: pass
-                   if noe_peakf_list:
-                     for noe_peakf in noe_peakf_list:
-                         noe_peakf_split=noe_peakf.split()
-                         for noe_peakii in noe_peaki_list:
-                           noe_peakii_split=noe_peakii.split()
-                           if ((float(noe_peakii_split[1])>(float(noe_peakf_split[1])-ppm_range[0])) and 
-                               (float(noe_peakii_split[1])<(float(noe_peakf_split[1])+ppm_range[0]))
-                                ):shared_peak_neighbors+=1
-                         if ((float(noe_peakf_split[1])>(float(linei_split[1])-ppm_range[0])) and 
-                             (float(noe_peakf_split[1])<(float(linei_split[1])+ppm_range[0])) and
-                             (not str(linef_split[0]) in peak_neighbors_clustering)):
-                             ppm_matching[1]=float(noe_peakf_split[1])-float(linei_split[1])
-                             sym=1
-                   peak_neighbors_clustering.append([str(linef_split[0]),shared_peak_neighbors,ppm_matching,sym])
-                   if sym==1:peak_neighbors_scoring.append((str(linef_split[0]),shared_peak_neighbors,ppm_matching)) # for noe matrix used for scoring                        
+
+             noe_peaki_freq1 = noe_peaki_data['freq1']
+             linei_freq1 = float(linei_split[1])
+             ppm_range0 = ppm_range[0]
+
+             for hmqc_data in hmqc_parsed:
+                 # OPTIMIZED: Use cached values
+                 if not (noe_peaki_freq1 > (hmqc_data['freq1'] - ppm_range0) and
+                        noe_peaki_freq1 < (hmqc_data['freq1'] + ppm_range0)):
+                   continue
+
+                 shared_peak_neighbors=0
+                 sym=sym_coef
+                 ppm_matching=[0.035,0.035]
+                 ppm_matching[0]=noe_peaki_freq1 - hmqc_data['freq1']
+
+                 try:
+                   noe_peakf_list=getattr(result, str(hmqc_data['name'])+'_3dpeaks')
+                 except AttributeError:
+                   noe_peakf_list = None
+
+                 if noe_peakf_list:
+                   # OPTIMIZED: Parse once and use vectorized checks where possible
+                   noe_peakf_parsed = []
+                   for noe_peakf in noe_peakf_list:
+                     noe_peakf_split = noe_peakf.split()
+                     noe_peakf_parsed.append({
+                       'freq1': float(noe_peakf_split[1]),
+                       'split': noe_peakf_split
+                     })
+
+                   for noe_peakf_data in noe_peakf_parsed:
+                     noe_peakf_freq1 = noe_peakf_data['freq1']
+                     # Count shared neighbors
+                     for noe_peakii_data in noe_peaki_parsed:
+                       if (noe_peakii_data['freq1'] > (noe_peakf_freq1 - ppm_range0) and
+                           noe_peakii_data['freq1'] < (noe_peakf_freq1 + ppm_range0)):
+                         shared_peak_neighbors+=1
+
+                     if (noe_peakf_freq1 > (linei_freq1 - ppm_range0) and
+                         noe_peakf_freq1 < (linei_freq1 + ppm_range0) and
+                         str(hmqc_data['name']) not in [x[0] for x in peak_neighbors_clustering]):
+                       ppm_matching[1] = noe_peakf_freq1 - linei_freq1
+                       sym=1
+
+                 peak_neighbors_clustering.append([str(hmqc_data['name']),shared_peak_neighbors,ppm_matching[:],sym])
+                 if sym==1:peak_neighbors_scoring.append((str(hmqc_data['name']),shared_peak_neighbors,ppm_matching[:]))                        
              n=0
              m=len(peak_neighbors_clustering)
              for i in range(len(peak_neighbors_clustering)):
@@ -404,9 +482,10 @@ def build_assignment(index):
                 file.close()         
                 if len(assignment_archive)==0:
                   index_peaks=assignment_archive_FINAL[0]+involved_peak
-                  matrix_noe=peak_matrix_Scoring[:,index_peaks][index_peaks,:]
+                  # OPTIMIZED: Use np.ix_ for efficient fancy indexing
+                  matrix_noe=peak_matrix_Scoring[np.ix_(index_peaks, index_peaks)]
                   assignment_archive.append(index_peaks)
-                  matrix_noe_geminal=peak_geminal[:,index_peaks][index_peaks,:]
+                  matrix_noe_geminal=peak_geminal[np.ix_(index_peaks, index_peaks)]
                 for ii in range(len(assignment_archive_FINAL[1:])):
                   for element in possible_peak_assignments:
                     index_methyls=assignment_archive_FINAL[ii+1][0]+element                                    
@@ -419,11 +498,11 @@ def build_assignment(index):
                          flag_Stop=1
                          break         
                     if flag_Stop==1:continue         
-                    matrix_assignment=new_metrics[0][:,index_methyls][index_methyls,:]
+                    matrix_assignment=new_metrics[0][np.ix_(index_methyls, index_methyls)]
                     testing=matrix_assignment*matrix_noe
                     #####Geminal scaling factor####################
                     if (flag_geminal==1 and matrix_noe_geminal.sum()>0):
-                      matrix_assignment_geminal=new_metrics[1][:,index_methyls][index_methyls,:]
+                      matrix_assignment_geminal=new_metrics[1][np.ix_(index_methyls, index_methyls)]
                       testing_geminal=matrix_noe_geminal*matrix_assignment_geminal
                       tot=round(testing.sum()*(1+0.2*(testing_geminal.sum()/float(matrix_noe_geminal.sum()))),3)
                     #####Geminal scaling factor
@@ -445,11 +524,11 @@ def build_assignment(index):
                         for j in range(len(assignment_archive[i+1][0])):
                           peak=HMQC_peak_list[int(assignment_archive[0][j])]
                           methyl=metrics[2][int(assignment_archive[i+1][0][j])]
-                          if not peak in list(assignment_collection.keys()):
+                          if assignment_collection not in assignment_collection:
                             assignment_collection[peak]={}
                             assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                           else:
-                            if not methyl in list(assignment_collection[peak].keys()):
+                            if assignment_collection[peak] not in assignment_collection[peak]:
                               assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                             elif (methyl in list(assignment_collection[peak].keys()) and 
                               assignment_archive[i+1][1]>assignment_collection[peak][methyl]):
@@ -487,11 +566,11 @@ def build_assignment(index):
                       for j in range(len(assignment_archive[i+1][0])):
                         peak=HMQC_peak_list[int(assignment_archive[0][j])]
                         methyl=metrics[2][int(assignment_archive[i+1][0][j])]
-                        if not peak in list(assignment_collection.keys()):
+                        if assignment_collection not in assignment_collection:
                           assignment_collection[peak]={}
                           assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                         else:
-                          if not methyl in list(assignment_collection[peak].keys()):
+                          if assignment_collection[peak] not in assignment_collection[peak]:
                             assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                           elif (methyl in list(assignment_collection[peak].keys()) and 
                             assignment_archive[i+1][1]>assignment_collection[peak][methyl]):
@@ -543,8 +622,8 @@ def build_assignment_peak(index):
           if total_Assignments==[]:total_Assignments=[[],[]]
           #index_matrix_noe=locked_noe+total_Assignments[0]+assignment_old[0]
           index_matrix_noe=total_Assignments[0]+assignment_old[0]
-          matrix_noe=peak_matrix_Scoring[:,index_matrix_noe][index_matrix_noe,:]
-          matrix_noe_geminal=peak_geminal[:,index_matrix_noe][index_matrix_noe,:]
+          matrix_noe=peak_matrix_Scoring[np.ix_(index_matrix_noe, index_matrix_noe)]
+          matrix_noe_geminal=peak_geminal[np.ix_(index_matrix_noe, index_matrix_noe)]
           
           for assignment in total_Assignments[1:]:          
             #index_matrix_methyls=locked_methyl+assignment+assignment_old[1]
@@ -559,7 +638,7 @@ def build_assignment_peak(index):
                   flag_Stop=1
                   break   
             if flag_Stop==1:continue
-            matrix_assignment=new_metrics[0][:,index_matrix_methyls][index_matrix_methyls,:]
+            matrix_assignment=new_metrics[0][np.ix_(index_matrix_methyls, index_matrix_methyls)]
             
             #####IN: Test allowed assignment for all peaks #######
             try:
@@ -568,7 +647,7 @@ def build_assignment_peak(index):
                 peak=HMQC_peak_list[int(index_matrix_noe[i])]
                 methyl=metrics[2][int(index_matrix_methyls[i])]
                 if peak in list(archive_assignment_result.keys()):
-                  if not methyl in list(archive_assignment_result[peak].keys()):
+                  if archive_assignment_result[peak] not in archive_assignment_result[peak]:
                     flag_stop=1
                     break
                   else:pass
@@ -582,7 +661,7 @@ def build_assignment_peak(index):
             
             #####Geminal scaling factor
             if (flag_geminal==1 and matrix_noe_geminal.sum()>0):
-              matrix_assignment_geminal=new_metrics[1][:,index_matrix_methyls][index_matrix_methyls,:]
+              matrix_assignment_geminal=new_metrics[1][np.ix_(index_matrix_methyls, index_matrix_methyls)]
               testing_geminal=matrix_noe_geminal*matrix_assignment_geminal
               tot=round(tot*(1+0.2*(testing_geminal.sum()/float(matrix_noe_geminal.sum()))),3)
             #####Geminal scaling factor
@@ -889,13 +968,22 @@ except RuntimeError:
     pass  # Already set
 
 Time_start=time.datetime.now()
-os.makedirs('./'+str(Time_start).split('.')[0])
-os.makedirs('./'+str(Time_start).split('.')[0]+'/Input')
-os.makedirs('./'+str(Time_start).split('.')[0]+'/Output')
-shutil.copy('./'+str(sys.argv[1]),'./'+str(Time_start).split('.')[0]+'/Input/'+str(sys.argv[1]))
-shutil.copy('./'+str(sys.argv[0]),'./'+str(Time_start).split('.')[0]+'/Input/'+str(sys.argv[0]))
 
-file_log=open('./'+str(Time_start).split('.')[0]+'/log', 'w')
+# Cache commonly used paths for performance
+BASE_DIR = './{}'.format(str(Time_start).split('.')[0])
+INPUT_DIR = '{}/Input'.format(BASE_DIR)
+OUTPUT_DIR = '{}/Output'.format(BASE_DIR)
+LOG_FILE = '{}/log'.format(BASE_DIR)
+RUN_DIR = '{}/run'.format(BASE_DIR)
+TEMP_DIR = '{}/run/temp'.format(BASE_DIR)
+
+os.makedirs(BASE_DIR)
+os.makedirs(INPUT_DIR)
+os.makedirs(OUTPUT_DIR)
+shutil.copy('./'+str(sys.argv[1]), '{}/{}'.format(INPUT_DIR, str(sys.argv[1])))
+shutil.copy('./'+str(sys.argv[0]), '{}/{}'.format(INPUT_DIR, str(sys.argv[0])))
+
+file_log=open(LOG_FILE, 'w')
 file_log.write(str(Time_start).split('.')[0]+'\n')
 
 #file_test=open('./'+str(Time_start).split('.')[0]+'/test', 'w')
@@ -1016,14 +1104,9 @@ methyl_file.close()
 #pdb_matrix.close()
 
 file_log.write('###################################'+'\n')
-A,I,L,M,T,V=0,0,0,0,0,0
-for i in range(len(metrics[2])):
-  if metrics[2][i][0]=='A':A+=1
-  elif metrics[2][i][0]=='I':I+=1
-  elif metrics[2][i][0]=='L':L+=1
-  elif metrics[2][i][0]=='M':M+=1
-  elif metrics[2][i][0]=='T':T+=1
-  elif metrics[2][i][0]=='V':V+=1
+# OPTIMIZED: Use Counter for efficient counting
+counts = Counter(m[0] for m in metrics[2])
+A, I, L, M, T, V = counts.get('A', 0), counts.get('I', 0), counts.get('L', 0), counts.get('M', 0), counts.get('T', 0), counts.get('V', 0)
 file_log.write('Number of methyls: '+str(A+I+2*L+M+T+2*V)+'\n')
 file_log.write('A: '+str(A)+'\nI: '+str(I)+'\nL: '+str(2*L)+'\nM: '+str(M)+'\nT: '+str(T)+'\nV: '+str(2*V)+'\n')
 
@@ -1080,7 +1163,7 @@ for i in assignment_locked_peak:
 N=peak_matrix_clustering.shape[0]
 #matrix2=peak_matrix_clustering
 matrix2=np.dot(peak_matrix_clustering,peak_matrix_clustering)
-for i in range(N):matrix2[i,i]=0
+np.fill_diagonal(matrix2, 0)  # OPTIMIZED: Use NumPy built-in
 P_high=round(np.amax(matrix2),0)
 
 
@@ -1173,10 +1256,10 @@ for name_peak in list_peak:
           locked_methyl=locked_methyl+[assignment_locked_methyl[i]]
       if total_Assignments==[]:total_Assignments=[[],[]]
       index_matrix_noe=locked_noe+total_Assignments[0]
-      matrix_noe=peak_matrix_Scoring[:,index_matrix_noe][index_matrix_noe,:]
+      matrix_noe=peak_matrix_Scoring[np.ix_(index_matrix_noe, index_matrix_noe)]
       for assignment in total_Assignments[1:]:
         index_matrix_methyls=locked_methyl+assignment
-        matrix_assignment=new_metrics[0][:,index_matrix_methyls][index_matrix_methyls,:]
+        matrix_assignment=new_metrics[0][np.ix_(index_matrix_methyls, index_matrix_methyls)]
         testing=matrix_assignment*matrix_noe
         tot=testing.sum()
         tot_res=testing.sum(axis=0)
@@ -1194,11 +1277,11 @@ for name_peak in list_peak:
           for j in range(len(assignment_archive[i][0])):
             peak=HMQC_peak_list[assignment_archive[i][0][j]]
             methyl=metrics[2][assignment_archive[i][1][j]]
-            if not peak in list(archive_assignment_cluster.keys()):
+            if archive_assignment_cluster not in archive_assignment_cluster:
               archive_assignment_cluster[peak]={}
               archive_assignment_cluster[peak][methyl]=assignment_archive[i][2]
             else:
-              if not methyl in list(archive_assignment_cluster[peak].keys()):
+              if archive_assignment_cluster[peak] not in archive_assignment_cluster[peak]:
                 archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
               elif (methyl in list(archive_assignment_cluster[peak].keys()) and
                     archive_assignment_cluster[peak][methyl]<assignment_archive[i][2]):
@@ -1351,10 +1434,10 @@ for P in P_list:
           number_of_pool=len(list_of_assignment_index)//cpu
           number_of_pool_rest=len(list_of_assignment_index)%cpu
           number_of_files=0
-          for i in range(number_of_pool):
-              pool=mp.Pool(processes=cpu) 
+          # OPTIMIZED: Create pool once and reuse
+          with mp.Pool(processes=cpu) as pool:
+            for i in range(number_of_pool):
               pool_result=pool.map(build_assignment_peak, list_of_assignment_index[cpu*i:cpu*(i+1)])
-              pool.close()
 
               for j in range(len(pool_result)):
                 if  pool_result[j][1]>highest_score_small:highest_score_small=pool_result[j][1]
@@ -1363,15 +1446,12 @@ for P in P_list:
                 if len(pool_result[j][0])!=0:assignments_table.append(pool_result[j][0])
               pool_result=[]
               if len(assignments_table)!=0:
-                file=open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_'+str(number_of_files), 'wb')
-                pickle.dump(assignments_table,file,protocol=pickle.HIGHEST_PROTOCOL)
-                file.close()
+                with open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_'+str(number_of_files), 'wb') as file:
+                  pickle.dump(assignments_table,file,protocol=pickle.HIGHEST_PROTOCOL)
                 assignments_table=[]
-                number_of_files+=1 
-          if number_of_pool_rest!=0:
-              pool = mp.Pool(processes=cpu) 
-              pool_result=pool.map(build_assignment_peak, list_of_assignment_index[number_of_pool*cpu:]) 
-              pool.close()
+                number_of_files+=1
+            if number_of_pool_rest!=0:
+              pool_result=pool.map(build_assignment_peak, list_of_assignment_index[number_of_pool*cpu:])
               
               for j in range(len(pool_result)):
                 if  pool_result[j][1]>highest_score_small:highest_score_small=pool_result[j][1]
@@ -1417,11 +1497,11 @@ for P in P_list:
             for j in range(len(assignment_archive[i][0])):
               peak=HMQC_peak_list[assignment_archive[i][0][j]]
               methyl=metrics[2][assignment_archive[i][1][j]]
-              if not peak in list(archive_assignment_cluster.keys()):
+              if archive_assignment_cluster not in archive_assignment_cluster:
                 archive_assignment_cluster[peak]={}
                 archive_assignment_cluster[peak][methyl]=assignment_archive[i][2]
               else:
-                if not methyl in list(archive_assignment_cluster[peak].keys()):
+                if archive_assignment_cluster[peak] not in archive_assignment_cluster[peak]:
                   archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
                 elif (methyl in list(archive_assignment_cluster[peak].keys()) and
                       archive_assignment_cluster[peak][methyl]<assignment_archive[i][2]):
@@ -1548,7 +1628,7 @@ for P in P_list:
                     peak=HMQC_peak_list[int(assignment_archive_clusterX[0][0][i])]
                     methyl=metrics[2][int(line[1][i])]
                     if peak in list(archive_assignment_result.keys()):
-                      if not methyl in list(archive_assignment_result[peak].keys()):
+                      if archive_assignment_result[peak] not in archive_assignment_result[peak]:
                         flag_stop=1
                         break
                       else:pass
@@ -1705,9 +1785,9 @@ for P in P_list:
         for element in pool_result:
               archive=element[0]
               for peak in list(archive.keys()):
-                if not peak in list(archive_assignment_result.keys()):archive_assignment_result[peak]={}
+                if archive_assignment_result not in archive_assignment_result:archive_assignment_result[peak]={}
                 for methyl in list(archive[peak].keys()):
-                  if not methyl in list(archive_assignment_result[peak].keys()):
+                  if archive_assignment_result[peak] not in archive_assignment_result[peak]:
                     archive_assignment_result[peak][methyl]=archive[peak][methyl]
                   if (methyl in list(archive_assignment_result[peak].keys()) and
                       archive[peak][methyl]>archive_assignment_result[peak][methyl]):
@@ -1721,9 +1801,9 @@ for P in P_list:
                   for element in pool_result:
                     archive=element[0]
                     for peak in list(archive.keys()):
-                      if not peak in list(archive_assignment_result.keys()):archive_assignment_result[peak]={}
+                      if archive_assignment_result not in archive_assignment_result:archive_assignment_result[peak]={}
                       for methyl in list(archive[peak].keys()):
-                        if not methyl in list(archive_assignment_result[peak].keys()):
+                        if archive_assignment_result[peak] not in archive_assignment_result[peak]:
                           archive_assignment_result[peak][methyl]=archive[peak][methyl]
                         if (methyl in list(archive_assignment_result[peak].keys()) and  
                             archive[peak][methyl]>archive_assignment_result[peak][methyl]):
@@ -1917,9 +1997,9 @@ while cycler==0:
       for element in pool_result:
         archive=element[0]
         for peak in list(archive.keys()):
-          if not peak in list(archive_assignment_result.keys()):archive_assignment_result[peak]={}
+          if archive_assignment_result not in archive_assignment_result:archive_assignment_result[peak]={}
           for methyl in list(archive[peak].keys()):
-            if not methyl in list(archive_assignment_result[peak].keys()):
+            if archive_assignment_result[peak] not in archive_assignment_result[peak]:
               archive_assignment_result[peak][methyl]=archive[peak][methyl]
             if (methyl in list(archive_assignment_result[peak].keys())
               and archive[peak][methyl]>archive_assignment_result[peak][methyl]):
@@ -1933,9 +2013,9 @@ while cycler==0:
         for element in pool_result:
           archive=element[0]
           for peak in list(archive.keys()):
-            if not peak in list(archive_assignment_result.keys()):archive_assignment_result[peak]={}
+            if archive_assignment_result not in archive_assignment_result:archive_assignment_result[peak]={}
             for methyl in list(archive[peak].keys()):
-              if not methyl in list(archive_assignment_result[peak].keys()):
+              if archive_assignment_result[peak] not in archive_assignment_result[peak]:
                 archive_assignment_result[peak][methyl]=archive[peak][methyl]
               if (methyl in list(archive_assignment_result[peak].keys())
                   and archive[peak][methyl]>archive_assignment_result[peak][methyl]):
@@ -1967,7 +2047,7 @@ while cycler==0:
         for peak in list(archive_assignment_result.keys()):
           if peak in list(archive_assignment_result_2save.keys()):
             for methyl in archive_assignment_result_2save[peak]:
-              if not methyl in list(archive_assignment_result[peak].keys()):
+              if archive_assignment_result[peak] not in archive_assignment_result[peak]:
                 archive_assignment_result[peak][methyl]=archive_assignment_result_2save[peak][methyl]
               else:pass
           else:pass
@@ -2002,12 +2082,12 @@ histo_ambiguity={}
 for peakline in file.readlines()[2:]:
   if peakline.count('NotAss')==0:
     number_of_methyls=peakline.count(':')
-    if not str(number_of_methyls) in list(histo_ambiguity.keys()):
+    if histo_ambiguity not in histo_ambiguity:
       histo_ambiguity[str(number_of_methyls)]=1
     else:histo_ambiguity[str(number_of_methyls)]+=1
   else:
     number_of_methyls=peakline.count(',')+1
-    if not str(number_of_methyls) in list(histo_ambiguity.keys()):
+    if histo_ambiguity not in histo_ambiguity:
       histo_ambiguity[str(number_of_methyls)]=1
     else:histo_ambiguity[str(number_of_methyls)]+=1
 file.close()
