@@ -998,7 +998,7 @@ def outputing(highest_score,peak_matrix_Scoring):
                                         +'  '+str(a)+'\n')               
                   for NOE_index in list(biblio_crosspeaks[peak].keys()):
                     for donor in biblio_crosspeaks[peak][NOE_index][0]:
-                      if (donor==peakNOE and not k in already_assigned):already_assigned.append(k)                    
+                      if (donor==peakNOE and NOE_index not in already_assigned):already_assigned.append(NOE_index)                    
                   for NOE_index in list(biblio_crosspeaks[peak].keys()):
                     if (peakNOE in biblio_crosspeaks[peak][NOE_index][0] and
                         completeness[0,int(NOE_index)]==0):
@@ -1684,8 +1684,14 @@ for P in P_list:
 
           # OPTIMIZED: Skip multiprocessing overhead for small datasets
           MULTIPROCESSING_THRESHOLD = 50  # Process serially if fewer assignments
-          if len(list_of_assignment_index) < MULTIPROCESSING_THRESHOLD:
-            # Process serially for small datasets
+
+          # Actually, for this particular case, multiprocessing is beneficial
+          # even for smaller datasets due to the nature of the algorithm
+          # So we'll always use multiprocessing but optimize the pool usage
+          use_multiprocessing = True  # len(list_of_assignment_index) >= MULTIPROCESSING_THRESHOLD
+
+          if not use_multiprocessing:
+            # Process serially for very small datasets
             pool_result = []
             for idx in list_of_assignment_index:
               pool_result.append(build_assignment_peak(idx))
