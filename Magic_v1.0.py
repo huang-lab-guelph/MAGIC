@@ -1277,13 +1277,13 @@ for name_peak in list_peak:
           for j in range(len(assignment_archive[i][0])):
             peak=HMQC_peak_list[assignment_archive[i][0][j]]
             methyl=metrics[2][assignment_archive[i][1][j]]
-            if archive_assignment_cluster not in archive_assignment_cluster:
+            if peak not in archive_assignment_cluster:
               archive_assignment_cluster[peak]={}
               archive_assignment_cluster[peak][methyl]=assignment_archive[i][2]
             else:
-              if archive_assignment_cluster[peak] not in archive_assignment_cluster[peak]:
+              if methyl not in archive_assignment_cluster[peak]:
                 archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
-              elif (methyl in list(archive_assignment_cluster[peak].keys()) and
+              elif (methyl in archive_assignment_cluster[peak] and
                     archive_assignment_cluster[peak][methyl]<assignment_archive[i][2]):
                 archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
               else:pass   
@@ -1497,13 +1497,13 @@ for P in P_list:
             for j in range(len(assignment_archive[i][0])):
               peak=HMQC_peak_list[assignment_archive[i][0][j]]
               methyl=metrics[2][assignment_archive[i][1][j]]
-              if archive_assignment_cluster not in archive_assignment_cluster:
+              if peak not in archive_assignment_cluster:
                 archive_assignment_cluster[peak]={}
                 archive_assignment_cluster[peak][methyl]=assignment_archive[i][2]
               else:
-                if archive_assignment_cluster[peak] not in archive_assignment_cluster[peak]:
+                if methyl not in archive_assignment_cluster[peak]:
                   archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
-                elif (methyl in list(archive_assignment_cluster[peak].keys()) and
+                elif (methyl in archive_assignment_cluster[peak] and
                       archive_assignment_cluster[peak][methyl]<assignment_archive[i][2]):
                   archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
                 else:pass
