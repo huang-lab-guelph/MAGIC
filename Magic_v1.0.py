@@ -12,6 +12,7 @@ import resource
 import psutil
 from random import shuffle
 from scipy.spatial.distance import cdist
+from scipy.spatial import cKDTree  # OPTIMIZED: For efficient spatial range queries
 from scipy import sparse  # OPTIMIZED: Added for sparse matrix operations
 from collections import Counter
 from functools import lru_cache  # OPTIMIZED: Added for result caching
@@ -192,24 +193,31 @@ def distances(pdb,Cutoff,lowCut,flag):
     if atom['atom_type'] != 'H':
       Methyl_list.append(atom['res_name'] + atom['res_num'] + atom['atom_type'])
 
-  # OPTIMIZED: Vectorized distance calculation using cdist
+  # OPTIMIZED: Build KD-tree for efficient spatial range queries
   coords_array = np.array([atom['coords'] for atom in parsed_atoms])
-  distance_matrix = cdist(coords_array, coords_array, metric='euclidean')
-  distance_matrix = np.round(distance_matrix, 1)
+  kdtree = cKDTree(coords_array)
 
-  # Process all pairs
+  # Determine maximum cutoff for the query radius
+  max_cutoff = Cutoff + 2  # Account for potential conformational changes
+
+  # Process all pairs using KD-tree range queries
   n_atoms = len(parsed_atoms)
   for i in range(n_atoms):
     atomi = parsed_atoms[i]
     if atomi['atom_type'] == 'H':
       continue
 
-    for j in range(n_atoms):
+    # OPTIMIZED: Query only nearby atoms within max_cutoff distance
+    # This replaces O(N) inner loop with O(log N) KD-tree query
+    nearby_indices = kdtree.query_ball_point(coords_array[i], max_cutoff)
+
+    for j in nearby_indices:
       atomf = parsed_atoms[j]
       if atomf['atom_type'] == 'H' or i == j:
         continue
 
-      d = distance_matrix[i, j]
+      # Calculate distance only for nearby pairs
+      d = round(np.linalg.norm(coords_array[i] - coords_array[j]), 1)
 
       ##############Relax cutoff and lowCut if conformation changes#########
       Cutoff2 = Cutoff
