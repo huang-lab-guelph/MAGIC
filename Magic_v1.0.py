@@ -14,6 +14,7 @@ from random import shuffle
 from scipy.spatial.distance import cdist
 from scipy import sparse  # OPTIMIZED: Added for sparse matrix operations
 from collections import Counter
+from functools import lru_cache  # OPTIMIZED: Added for result caching
 
 # Pre-compile regex patterns for performance
 RESIDUE_PATTERN = re.compile(r'[A-Z]([0-9]+)[A-Z]')
@@ -42,6 +43,71 @@ def sparse_submatrix(matrix, row_indices, col_indices):
     else:
         # For dense matrices, use standard indexing
         return matrix[np.ix_(row_indices, col_indices)]
+
+# OPTIMIZED: Matrix operation cache for frequently accessed submatrices
+class MatrixCache:
+    """Cache for matrix submatrix operations to avoid recomputation."""
+    def __init__(self, max_size=1000):
+        self.cache = {}
+        self.max_size = max_size
+        self.hits = 0
+        self.misses = 0
+
+    def get_key(self, matrix_id, row_indices, col_indices):
+        """Generate cache key from matrix ID and indices."""
+        row_tuple = tuple(sorted(row_indices))
+        col_tuple = tuple(sorted(col_indices))
+        return (matrix_id, row_tuple, col_tuple)
+
+    def get(self, matrix_id, row_indices, col_indices):
+        """Get cached submatrix if available."""
+        key = self.get_key(matrix_id, row_indices, col_indices)
+        if key in self.cache:
+            self.hits += 1
+            return self.cache[key]
+        self.misses += 1
+        return None
+
+    def put(self, matrix_id, row_indices, col_indices, submatrix):
+        """Cache a submatrix result."""
+        # If cache is full, remove oldest entries (simple FIFO)
+        if len(self.cache) >= self.max_size:
+            # Remove 20% of oldest entries
+            keys_to_remove = list(self.cache.keys())[:self.max_size // 5]
+            for key in keys_to_remove:
+                del self.cache[key]
+
+        key = self.get_key(matrix_id, row_indices, col_indices)
+        self.cache[key] = submatrix
+
+    def clear(self):
+        """Clear the cache."""
+        self.cache.clear()
+        self.hits = 0
+        self.misses = 0
+
+# Global matrix cache instance
+_matrix_cache = MatrixCache(max_size=500)
+
+def sparse_submatrix_cached(matrix, matrix_id, row_indices, col_indices):
+    """
+    Efficiently extract submatrix with caching support.
+    matrix_id should be a unique identifier for the matrix (e.g., 'peak_matrix_Scoring')
+    """
+    # Try to get from cache
+    cached = _matrix_cache.get(matrix_id, row_indices, col_indices)
+    if cached is not None:
+        return cached
+
+    # Compute submatrix
+    if sparse.issparse(matrix):
+        result = matrix[np.ix_(row_indices, col_indices)]
+    else:
+        result = matrix[np.ix_(row_indices, col_indices)]
+
+    # Cache the result
+    _matrix_cache.put(matrix_id, row_indices, col_indices, result)
+    return result
 
 class obj:
   pass
@@ -544,14 +610,14 @@ def build_assignment(index):
                          flag_Stop=1
                          break         
                     if flag_Stop==1:continue
-                    # OPTIMIZED: Extract submatrix (sparse or dense based on input)
-                    matrix_assignment = sparse_submatrix(new_metrics[0], index_methyls, index_methyls)
+                    # OPTIMIZED: Extract submatrix with caching (hot loop - called thousands of times)
+                    matrix_assignment = sparse_submatrix_cached(new_metrics[0], 'new_metrics_0', index_methyls, index_methyls)
                     if sparse.issparse(matrix_assignment):
                       matrix_assignment = matrix_assignment.toarray()
                     testing=matrix_assignment*matrix_noe
                     #####Geminal scaling factor####################
                     if (flag_geminal==1 and matrix_noe_geminal.sum()>0):
-                      matrix_assignment_geminal = sparse_submatrix(new_metrics[1], index_methyls, index_methyls)
+                      matrix_assignment_geminal = sparse_submatrix_cached(new_metrics[1], 'new_metrics_1', index_methyls, index_methyls)
                       if sparse.issparse(matrix_assignment_geminal):
                         matrix_assignment_geminal = matrix_assignment_geminal.toarray()
                       testing_geminal=matrix_noe_geminal*matrix_assignment_geminal
@@ -694,8 +760,8 @@ def build_assignment_peak(index):
                   flag_Stop=1
                   break   
             if flag_Stop==1:continue
-            # OPTIMIZED: Extract submatrix from sparse matrix
-            matrix_assignment = sparse_submatrix(new_metrics[0], index_matrix_methyls, index_matrix_methyls)
+            # OPTIMIZED: Extract submatrix with caching (hot loop in build_assignment_peak)
+            matrix_assignment = sparse_submatrix_cached(new_metrics[0], 'new_metrics_0', index_matrix_methyls, index_matrix_methyls)
             if sparse.issparse(matrix_assignment):
               matrix_assignment = matrix_assignment.toarray()
 
@@ -720,7 +786,7 @@ def build_assignment_peak(index):
 
             #####Geminal scaling factor
             if (flag_geminal==1 and matrix_noe_geminal.sum()>0):
-              matrix_assignment_geminal = sparse_submatrix(new_metrics[1], index_matrix_methyls, index_matrix_methyls)
+              matrix_assignment_geminal = sparse_submatrix_cached(new_metrics[1], 'new_metrics_1', index_matrix_methyls, index_matrix_methyls)
               if sparse.issparse(matrix_assignment_geminal):
                 matrix_assignment_geminal = matrix_assignment_geminal.toarray()
               testing_geminal=matrix_noe_geminal*matrix_assignment_geminal
