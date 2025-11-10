@@ -1247,8 +1247,8 @@ for i in range(N):
   setattr(selected_peaks_clusters, str(i), kept_neighbors_with_sharing)
 
 list_peak=dir(selected_peaks_clusters)
-list_peak.remove('__doc__')
-list_peak.remove('__module__')
+# Remove all special attributes that start with '__'
+list_peak = [item for item in list_peak if not item.startswith('__')]
 list_peak.sort(key=float)
 
 for name_peak_index in range(len(list_peak)):

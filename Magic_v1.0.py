@@ -1103,13 +1103,13 @@ for i in range(N):
         neighbors_with_sharing=np.array(neighbors_with_sharing).reshape((len(neighbors_with_sharing),1))
       setattr(selected_peaks_clusters, str(i), neighbors_with_sharing)
 liste=dir(selected_peaks_clusters)
-liste.remove('__doc__')
-liste.remove('__module__')
+# Remove all special attributes that start with '__'
+liste = [item for item in liste if not item.startswith('__')]
 liste.sort(key=float)
 
 list_peak=dir(selected_peaks_clusters)
-list_peak.remove('__doc__')
-list_peak.remove('__module__')
+# Remove all special attributes that start with '__'
+list_peak = [item for item in list_peak if not item.startswith('__')]
 list_peak.sort(key=float)
 
 set_of_methyls=metrics[2]      
@@ -1265,8 +1265,8 @@ for P in P_list:
         setattr(selected_peaks_clusters, str(i), neighbors_with_sharing)  
       ############################# NEW CHECKING ######################################
       list_peak=dir(selected_peaks_clusters)
-      list_peak.remove('__doc__')
-      list_peak.remove('__module__')
+      # Remove all special attributes that start with '__'
+      list_peak = [item for item in list_peak if not item.startswith('__')]
       list_peak.sort(key=float)
       for name_peak_index in range(len(list_peak)):      
         highest_score_small=0  
@@ -1341,7 +1341,7 @@ for P in P_list:
           if total<m:
             size=1
             m=total
-          else:size=total/(m)
+          else:size=total//(m)
           reste=total%(m)
           list_of_assignment_index=[]
           if size!=0:
@@ -1473,8 +1473,8 @@ for P in P_list:
       
       if P>0: 
         list_peak=dir(selected_peaks_clusters)
-        list_peak.remove('__doc__')
-        list_peak.remove('__module__')
+        # Remove all special attributes that start with '__'
+        list_peak = [item for item in list_peak if not item.startswith('__')]
         list_peak.sort(key=float)
         counter=0
         sort_index=np.zeros((2,len(list_peak)))          
@@ -1788,8 +1788,8 @@ a=0
 archive_alternative_Assignments=[]
 
 list_peak=dir(selected_peaks_clusters)
-list_peak.remove('__doc__')
-list_peak.remove('__module__')
+# Remove all special attributes that start with '__'
+list_peak = [item for item in list_peak if not item.startswith('__')]
 list_peak.sort(key=float)
 
 while cycler==0:

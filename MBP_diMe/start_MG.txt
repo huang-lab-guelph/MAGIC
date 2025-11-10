@@ -2,7 +2,7 @@
 ##2d reference spectrum:
 new_MBP_hmqc_MG.list
 ##3d NOESY:
-MBP_ILVM_cch_choppedL361_633p.list
+MBP_ILVM_cch_choppedL361_632p.list
 ##pdb:
 1DMB_choppedL361.pdb
 ##SEQ:
