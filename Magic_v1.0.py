@@ -2082,12 +2082,12 @@ histo_ambiguity={}
 for peakline in file.readlines()[2:]:
   if peakline.count('NotAss')==0:
     number_of_methyls=peakline.count(':')
-    if histo_ambiguity not in histo_ambiguity:
+    if str(number_of_methyls) not in histo_ambiguity:
       histo_ambiguity[str(number_of_methyls)]=1
     else:histo_ambiguity[str(number_of_methyls)]+=1
   else:
     number_of_methyls=peakline.count(',')+1
-    if histo_ambiguity not in histo_ambiguity:
+    if str(number_of_methyls) not in histo_ambiguity:
       histo_ambiguity[str(number_of_methyls)]=1
     else:histo_ambiguity[str(number_of_methyls)]+=1
 file.close()
