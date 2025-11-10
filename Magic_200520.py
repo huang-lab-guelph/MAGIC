@@ -230,7 +230,7 @@ def matrix_it(links, element_list, flag, factors,geminal_mark,overlap_topo):
       else:matrix[i,j]=0
   if flag=='peak': 
     for a in range(matrix.size):
-      i=int(a)/int(N)
+      i=int(a)//int(N)
       j=int(a)%int(N)
       if (matrix[i,j]<1 and matrix[j,i]<1):matrix[i,j],matrix[j,i]=0,0
       if (matrix[i,j]<1 and matrix[j,i]>2 and len(overlap_topo[j])==0):matrix[i,j]=1
@@ -471,7 +471,7 @@ def build_assignment(index):
                 file_log.write(str(index.index(iii)+1)+'/'+str(len(index))+'\n')
                 file_log.close()            
                 file_name=list_of_files[iii]
-                file=open('./'+directory.split('.')[0]+'/run/temp/'+str(file_name), 'r')
+                file=open('./'+directory.split('.')[0]+'/run/temp/'+str(file_name), 'rb')
                 assignment_archive_FINAL=pickle.load(file)
                 file.close()         
                 if len(assignment_archive)==0:
@@ -542,18 +542,18 @@ def build_assignment(index):
                     report_follow.close()
                     assignment_archive=list(assignment_archive_sorted)
                     assignment_archive_sorted=[]
-                    number_of_file=int((len(assignment_archive)-1))/int(file_size)
+                    number_of_file=int((len(assignment_archive)-1))//int(file_size)
                     number_of_file_rest=(len(assignment_archive)-1)%int(file_size)          
                     for i in range(number_of_file):
                         assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[i*file_size+1:(i+1)*file_size+1]
-                        file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                        pickle.dump(assignment_archive_to_save,file,-1)
+                        file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'wb')
+                        pickle.dump(assignment_archive_to_save,file,protocol=pickle.HIGHEST_PROTOCOL)
                         file.close()
                         index_files+=1
                     if number_of_file_rest!=0:
                         assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[number_of_file*file_size+1:]
-                        file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                        pickle.dump(assignment_archive_to_save,file,-1)
+                        file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'wb')
+                        pickle.dump(assignment_archive_to_save,file,protocol=pickle.HIGHEST_PROTOCOL)
                         file.close()
                         index_files+=1
                     assignment_archive=[assignment_archive[0]] 
@@ -585,24 +585,24 @@ def build_assignment(index):
                   assignment_archive=list(assignment_archive_sorted)
                   assignment_archive_sorted=[]                 
                   if (len(assignment_archive)-1)>file_size:
-                    number_of_file=(len(assignment_archive)-1)/int(file_size)
+                    number_of_file=(len(assignment_archive)-1)//int(file_size)
                     number_of_file_rest=(len(assignment_archive)-1)%int(file_size)
                     for i in range(number_of_file):
                       assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[i*file_size+1:(i+1)*file_size+1]
-                      file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                      pickle.dump(assignment_archive_to_save,file,-1)
+                      file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'wb')
+                      pickle.dump(assignment_archive_to_save,file,protocol=pickle.HIGHEST_PROTOCOL)
                       file.close()
                       index_files+=1
                     if number_of_file_rest!=0:
                       assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[number_of_file*file_size+1:]
-                      file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                      pickle.dump(assignment_archive_to_save,file,-1)
+                      file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'wb')
+                      pickle.dump(assignment_archive_to_save,file,protocol=pickle.HIGHEST_PROTOCOL)
                       file.close()
                       index_files+=1
                     assignment_archive=[]
                   else:
-                    file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                    pickle.dump(assignment_archive,file,-1)
+                    file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'wb')
+                    pickle.dump(assignment_archive,file,protocol=pickle.HIGHEST_PROTOCOL)
                     file.close()                    
                     assignment_archive=[]
               max=highest_score_inloop
@@ -711,11 +711,11 @@ def outputing(highest_score,peak_matrix_Scoring):
     file_log.close()
 
     if P=='iso':
-      hmqc_result_list=open('./'+directory+'/Output/hmqc_iso.list', 'w')
-      cch_result_list=open('./'+directory+'/Output/cch_iso.list', 'w')
+      hmqc_result_list=open('./'+directory+'/Output/hmqc_iso.list', 'w', encoding='utf-8')
+      cch_result_list=open('./'+directory+'/Output/cch_iso.list', 'w', encoding='utf-8')
     else:
-      hmqc_result_list=open('./'+directory+'/Output/hmqc.list', 'w')
-      cch_result_list=open('./'+directory+'/Output/cch.list', 'w')
+      hmqc_result_list=open('./'+directory+'/Output/hmqc.list', 'w', encoding='utf-8')
+      cch_result_list=open('./'+directory+'/Output/cch.list', 'w', encoding='utf-8')
           
     hmqc_result_list.write('Assignment\tw1\tw2\tNote\n\n')
     cch_result_list.write('Assignment\tw1\tw2\tw3\tNote\n\n')
@@ -783,7 +783,7 @@ def outputing(highest_score,peak_matrix_Scoring):
           peak=HMQC_peak_list[int(peaks[i])]
           methyl=metrics[2][int(methyls[i])]  
           try:
-            if re.search('\w(\d+)\w',str(methyl)).group(1)==re.search('(\d+)\w', peak).group(1):correct+=1
+            if re.search(r'\w(\d+)\w',str(methyl)).group(1)==re.search(r'(\d+)\w', peak).group(1):correct+=1
           except AttributeError:pass
           total+=1
           freq=getattr(result, str(peak)+'_freq')
@@ -873,21 +873,21 @@ def outputing(highest_score,peak_matrix_Scoring):
     hmqc_result_list.close()
     
     if P=='iso':
-      file=open('./'+directory+'/Output/cch_iso.list', 'r')
+      file=open('./'+directory+'/Output/cch_iso.list', 'r', encoding='utf-8')
       noelist=file.readlines()
       file.close()
-      file2=open('./'+directory+'/Output/hmqc_iso.list', 'r')
+      file2=open('./'+directory+'/Output/hmqc_iso.list', 'r', encoding='utf-8')
       hmqclist=file2.readlines()
       file2.close()
-      results=open('./'+directory+'/Output/mapping_iso.pml','w')
+      results=open('./'+directory+'/Output/mapping_iso.pml', 'w', encoding='utf-8')
     else:
-      file=open('./'+directory+'/Output/cch.list', 'r')
+      file=open('./'+directory+'/Output/cch.list', 'r', encoding='utf-8')
       noelist=file.readlines()
       file.close()
-      file2=open('./'+directory+'/Output/hmqc.list', 'r')
+      file2=open('./'+directory+'/Output/hmqc.list', 'r', encoding='utf-8')
       hmqclist=file2.readlines()
       file2.close()
-      results=open('./'+directory+'/Output/mapping.pml','w')
+      results=open('./'+directory+'/Output/mapping.pml', 'w', encoding='utf-8')
                 
     results.write('hide everything\n'+
                   'show ribbon\n'+
@@ -932,17 +932,17 @@ def outputing(highest_score,peak_matrix_Scoring):
             else:pass
             split0=split[0].split('-')
             res1i=int(re.search('[A-Z]([0-9]+)[A-Z]', split0[0]).group(1))
-            name1i=re.search('[0-9]+(\w+)', split0[0]).group(1)
+            name1i=re.search(r'[0-9]+(\w+)', split0[0]).group(1)
             res2i=int(re.search('[A-Z]([0-9]+)[A-Z]', split0[1]).group(1))
-            name2i=re.search('[0-9]+(\w+)', split0[1]).group(1)
+            name2i=re.search(r'[0-9]+(\w+)', split0[1]).group(1)
             sm=float(split[4])
             for line_2 in noelist[2:]:
               split=line_2.split()
               split0f=split[0].split('-')
               res1f=int(re.search('[A-Z]([0-9]+)[A-Z]', split0f[0]).group(1))
-              name1f=re.search('[0-9]+(\w+)', split0f[0]).group(1)
+              name1f=re.search(r'[0-9]+(\w+)', split0f[0]).group(1)
               res2f=int(re.search('[A-Z]([0-9]+)[A-Z]', split0f[1]).group(1))
-              name2f=re.search('[0-9]+(\w+)', split0f[1]).group(1)  
+              name2f=re.search(r'[0-9]+(\w+)', split0f[1]).group(1)  
               if (res1f==res2i and name1f==name2i and res1i==res2f and name1i==name2f):
                 sf=float(split[4])
                 sm=(sm+sf)/float(2)
@@ -970,7 +970,7 @@ def outputing(highest_score,peak_matrix_Scoring):
         if split[4][0]!='N':
             split0=split[0].split('-')
             res1i=int(re.search('[A-Z]([0-9]+)[A-Z]', split0[0]).group(1))
-            name1i=re.search('[0-9]+(\w+)', split0[0]).group(1)
+            name1i=re.search(r'[0-9]+(\w+)', split0[0]).group(1)
             try:
               score=float(split[5])
               M4=float(M)
@@ -995,6 +995,12 @@ def outputing(highest_score,peak_matrix_Scoring):
 ##########################################################################################
 ################################### MAIN STREAM ##########################################
 #
+# Set multiprocessing start method for macOS compatibility
+try:
+    mp.set_start_method('fork', force=True)
+except RuntimeError:
+    pass  # Already set
+
 Time_start=time.datetime.now()
 try:
   if sys.argv[2]:directory=str(sys.argv[2])
@@ -1010,7 +1016,7 @@ try:
   shutil.copy('./'+str(sys.argv[0]),'./'+directory+'/Input/'+str(sys.argv[0]))
 except OSError:pass
 
-file_log=open('./'+directory+'/log', 'w')
+file_log=open('./'+directory+'/log', 'w', encoding='utf-8')
 file_log.write(directory+'\n')
 
 file=open(str(sys.argv[1]),'r')
@@ -1086,14 +1092,14 @@ for NOESY_name in NOESY_list:
     peak_matrix_Scoring,peak_matrix_clustering=peak_matrix_Scoring+peak_matrix_Scoring_i,peak_matrix_clustering+peak_matrix_clustering_i
 peak_matrix_clustering=(peak_matrix_clustering/float(len(NOESY_list)))+np.identity(len(HMQC_peak_list))
 
-score_matrix=open('./'+directory+'/score_matrix','w')
+score_matrix=open('./'+directory+'/score_matrix', 'w', encoding='utf-8')
 np.savetxt(score_matrix,peak_matrix_Scoring,fmt='%.3f')
 score_matrix.close()
-C_matrix=open('./'+directory+'/C_matrix_TOT','w')
+C_matrix=open('./'+directory+'/C_matrix_TOT', 'w', encoding='utf-8')
 np.savetxt(C_matrix,peak_matrix_clustering,fmt='%.3f')
 C_matrix.close()      
 
-if len(HMQC_peak_list)>100:scaler=len(HMQC_peak_list)/float(100)
+if len(HMQC_peak_list)>100:scaler=len(HMQC_peak_list)//100
 else:scaler=1
 
 FILTER_start=np.mean(peak_matrix_Scoring.sum(axis=0))#*len(HMQC_peak_list)
@@ -1107,11 +1113,11 @@ metrics=distances(pdb, max_distance,lowCut,'run')
 
 methyl_to_add=[]
 for line in SEQ:
-  resID=re.search('\w(\d+)', line).group(1)
+  resID=re.search(r'\w(\d+)', line).group(1)
   resTYPE=line[0]
   flag=0
   for methyl in metrics[2]:
-    methylID=re.search('\w(\d+)\w', methyl).group(1)
+    methylID=re.search(r'\w(\d+)\w', methyl).group(1)
     if (methylID==resID and resTYPE==methyl[0]):
       flag=1
       break
@@ -1131,7 +1137,7 @@ for i in methyl_to_add:
 empty=[]
 new_metrics=matrix_it(metrics[3],metrics[2],'pdb',empty,empty,empty)
 
-methyl_file=open('./'+directory+'/Methyl_connectivity','w')
+methyl_file=open('./'+directory+'/Methyl_connectivity', 'w', encoding='utf-8')
 for line in metrics[3]:
   if line[2]!=0:methyl_file.write(str(line)+'\n')
 methyl_file.close()
@@ -1185,21 +1191,21 @@ if (a>A or il>I or l/2>L or v/2>V or t>T or m>M):
 else:pass
 file_log.close()
 
-report=open('./'+directory+'/Peak_list', 'w')
+report=open('./'+directory+'/Peak_list', 'w', encoding='utf-8')
 for i in range(len(HMQC_peak_list)): report.write(str(i)+' '+str(HMQC_peak_list[i])+'\n')
 report.close()
 
-report=open('./'+directory+'/Methyl_list', 'w')
+report=open('./'+directory+'/Methyl_list', 'w', encoding='utf-8')
 for i in range(len(metrics[2])): report.write(str(i)+' '+str(metrics[2][i])+'\n')
 report.close()
 
 assignment_locked_methyl=[]
 for i in assignment_locked_peak:
   name=HMQC_peak_list[i]
-  assignment_name=name[0]+re.search('\w(\d+)', name).group(1)
+  assignment_name=name[0]+re.search(r'\w(\d+)', name).group(1)
   flag_assigned=0
   for j in range(len(metrics[2])):
-    if metrics[2][j][0]+re.search('\w(\d+)', metrics[2][j]).group(1)==assignment_name:
+    if metrics[2][j][0]+re.search(r'\w(\d+)', metrics[2][j]).group(1)==assignment_name:
       assignment_locked_methyl.append(j)
       flag_assigned=1
   if flag_assigned==0:
@@ -1226,7 +1232,7 @@ for i in range(N):
 P_high=round(np.amax(matrix2),0)
 P=float(P_high)
 
-Density_matrix=open('./'+directory+'/Density_matrix','w')
+Density_matrix=open('./'+directory+'/Density_matrix', 'w', encoding='utf-8')
 np.savetxt(Density_matrix,matrix2,fmt='%.3f')
 Density_matrix.close()
 
@@ -1364,8 +1370,8 @@ for name_peak in list_peak:
           report.write(str(peak)+'=='+str(methyl)+' # ')
         report.write('\n')
       report.close()
-      file=open('./'+directory+'/run/Local/archive/archive_'+str(name_peak), 'w')
-      pickle.dump(assignment_archive,file,-1)
+      file=open('./'+directory+'/run/Local/archive/archive_'+str(name_peak), 'wb')
+      pickle.dump(assignment_archive,file,protocol=pickle.HIGHEST_PROTOCOL)
       file.close()
       assignment_archive=[]      
 ######################## iterative RUNs ####################
@@ -1441,7 +1447,7 @@ for P in P_list:
         if flag_continue==1:continue
         #######OUT: Skip peak assignment if overlapping already assigned peak ########       
         set_of_peaks=getattr(selected_peaks_clusters, str(peak_index))
-        file=open('./'+directory+'/run/Local/archive/archive_'+str(peak_index), 'r')
+        file=open('./'+directory+'/run/Local/archive/archive_'+str(peak_index), 'rb')
         assignment_archive_old=pickle.load(file)
         file.close()
         
@@ -1464,7 +1470,7 @@ for P in P_list:
         except IndexError:continue
         
         if (len(new_peaks)==0):continue
-        file_log=open('./'+directory+'/log', 'a')
+        file_log=open('./'+directory+'/log', 'a', encoding='utf-8')
         file_log.write('Local: Tc= '+str(round(P,2))+' ; Clustering around peak # '+str(peak_index)+'\n')
         file_log.close()
         
@@ -1480,7 +1486,7 @@ for P in P_list:
           if line!=sorting[-1]:flag_fin=0			
           else:flag_fin=1
           peak=line[1]
-          file=open('./'+directory+'/run/Local/archive/archive_'+str(peak_index), 'r')
+          file=open('./'+directory+'/run/Local/archive/archive_'+str(peak_index), 'rb')
           assignment_archive_old=pickle.load(file)
           file.close()
           All_possible_assignment=[]  
@@ -1515,7 +1521,7 @@ for P in P_list:
             for i in range(m):
               list_of_assignment_index.append([j for j in range(size*i,(i+1)*size)])
           if reste!=0:list_of_assignment_index.append([j for j in range(m*size,m*size+reste)])   
-          number_of_pool=len(list_of_assignment_index)/cpu
+          number_of_pool=len(list_of_assignment_index)//cpu
           number_of_pool_rest=len(list_of_assignment_index)%cpu
           number_of_files=0
           for i in range(number_of_pool):
@@ -1530,8 +1536,8 @@ for P in P_list:
                 if len(pool_result[j][0])!=0:assignments_table.append(pool_result[j][0])
               pool_result=[]
               if len(assignments_table)!=0:
-                file=open('./'+directory+'/run/Local/temp/temp_'+str(number_of_files), 'w')
-                pickle.dump(assignments_table,file,-1)
+                file=open('./'+directory+'/run/Local/temp/temp_'+str(number_of_files), 'wb')
+                pickle.dump(assignments_table,file,protocol=pickle.HIGHEST_PROTOCOL)
                 file.close()
                 assignments_table=[]
                 number_of_files+=1 
@@ -1548,8 +1554,8 @@ for P in P_list:
               pool_result=[]
 
               if len(assignments_table)!=0:
-                file=open('./'+directory+'/run/Local/temp/temp_'+str(number_of_files), 'w')
-                pickle.dump(assignments_table,file,-1)
+                file=open('./'+directory+'/run/Local/temp/temp_'+str(number_of_files), 'wb')
+                pickle.dump(assignments_table,file,protocol=pickle.HIGHEST_PROTOCOL)
                 file.close()
                 assignments_table=[]
                 number_of_files+=1
@@ -1574,7 +1580,7 @@ for P in P_list:
           assignment_archive=[]
           list_of_files=os.listdir('./'+directory+'/run/Local/temp/')
           for i in range(len(list_of_files)):
-              file=open('./'+directory+'/run/Local/temp/'+str(list_of_files[i]), 'r')
+              file=open('./'+directory+'/run/Local/temp/'+str(list_of_files[i]), 'rb')
               element=pickle.load(file)
               file.close()
               for j in range(len(element)):
@@ -1620,8 +1626,8 @@ for P in P_list:
               report.write(str(peak)+'=='+str(methyl)+' # ')
             report.write('\n')
           report.close()
-          file=open('./'+directory+'/run/Local/archive/archive_'+str(peak_index), 'w')
-          pickle.dump(assignment_archive,file,-1)
+          file=open('./'+directory+'/run/Local/archive/archive_'+str(peak_index), 'wb')
+          pickle.dump(assignment_archive,file,protocol=pickle.HIGHEST_PROTOCOL)
           file.close()
           assignment_archive=[] 
 #####################################################################################################      
@@ -1641,8 +1647,8 @@ for P in P_list:
         
         os.makedirs('./'+directory+'/run/temp')
         assignment_archive_FINAL=[assignment_locked_peak,[assignment_locked_methyl,]]
-        file=open('./'+directory+'/run/temp/100000000#', 'w')
-        pickle.dump(assignment_archive_FINAL,file,-1)
+        file=open('./'+directory+'/run/temp/100000000#', 'wb', encoding='utf-8')
+        pickle.dump(assignment_archive_FINAL,file,protocol=pickle.HIGHEST_PROTOCOL)
         file.close()
         highest_score=0
         flag_alone=0
@@ -1653,7 +1659,7 @@ for P in P_list:
       list_peak.sort(key=float)
       sort_index=np.zeros((2,len(list_peak)))          
       for i in range(len(list_peak)):
-            file=open('./'+directory+'/run/Local/archive/archive_'+str(i), 'r')
+            file=open('./'+directory+'/run/Local/archive/archive_'+str(i), 'rb')
             assignment_archive_clusterX=pickle.load(file)
             file.close()
             sort_index[0,i]=list_peak[i]
@@ -1690,12 +1696,12 @@ for P in P_list:
             if flag_continue==1:continue
             #######OUT: Skip peak assignment if overlapping already assigned peak ########
             
-            file=open('./'+directory+'/run/Local/archive/archive_'+str(cluster_name), 'r')
+            file=open('./'+directory+'/run/Local/archive/archive_'+str(cluster_name), 'rb')
             assignment_archive_clusterX=pickle.load(file)
             file.close()
 
             list_of_files=os.listdir('./'+directory+'/run/temp/')
-            file=open('./'+directory+'/run/temp/'+str(list_of_files[0]), 'r')
+            file=open('./'+directory+'/run/temp/'+str(list_of_files[0]), 'rb')
             assignment_previous=pickle.load(file)
             file.close()
             
@@ -1769,8 +1775,8 @@ for P in P_list:
                 list2stock.append([involved_peak,line_to_add,line[2]])					#EDIT
 
             #EDIT
-            file=open('./'+directory+'/run/Local/archive/archive_'+str(cluster_name), 'w')
-            pickle.dump(list2stock,file,-1)
+            file=open('./'+directory+'/run/Local/archive/archive_'+str(cluster_name), 'wb')
+            pickle.dump(list2stock,file,protocol=pickle.HIGHEST_PROTOCOL)
             file.close()
             #EDIT          
                           
@@ -1808,7 +1814,7 @@ for P in P_list:
             #if sum_tot>FILTER:max_len*=(sum_tot/FILTER)        
             max_len=int(round(max_len,0)) 
                         
-            file_test=open('./'+directory+'/test', 'a')
+            file_test=open('./'+directory+'/test', 'a', encoding='utf-8')
             file_test.write('P: '+str(round(P,2))+(7-len(str(round(P,2))))*' '+
                             '\tclus: '+str(cluster_name)+(5-len(str(cluster_name)))*' '+
                             '\t#peak: '+str(len(involved_peak))+(3-len(str(len(involved_peak))))*' '+
@@ -1834,7 +1840,7 @@ for P in P_list:
                file_test.close()
                continue                   
 
-            file_log=open('./'+directory+'/log', 'a')
+            file_log=open('./'+directory+'/log', 'a', encoding='utf-8')
             file_log.write('Global: Tc= '+str(round(P,1))+' ; Cluster merging # '+str(cluster_name)+'\n')
             file_log.close()      
             report_follow=open('./'+directory+'/run/Global/logFile_'+str(round(P,2)), 'a')
@@ -1848,7 +1854,7 @@ for P in P_list:
             archive_assignment_result_previous=archive_assignment_result
             archive_assignment_result={}
             shuffle(list_of_files)
-            size=len(list_of_files)/cpu
+            size=len(list_of_files)//cpu
             size_reste=len(list_of_files)%cpu 
             list_of_file_index=[]
             if size!=0:
@@ -1898,7 +1904,7 @@ for P in P_list:
             for peak in list(archive_assignment_result.keys()):
               for methyl in archive_assignment_result[peak]:
                 try:
-                  if re.search('\w(\d+)\w',str(methyl)).group(1)==re.search('(\d+)\w', peak).group(1):
+                  if re.search(r'\w(\d+)\w',str(methyl)).group(1)==re.search(r'(\d+)\w', peak).group(1):
                     if archive_assignment_result[peak][methyl]==highest_score:report_follow.write('R* ')
                     else:report_follow.write('R  ')
                     break
@@ -1933,7 +1939,7 @@ else:
   #print highest_score
   #print 'before',peak_matrix_Scoring.sum()
   ####### Recalculate score to take in account low confident connection
-  #file_log=open('./'+directory+'/log', 'w')
+  #file_log=open('./'+directory+'/log', 'w', encoding='utf-8')
   #for NOESY_name in NOESY_list:
   #  NOESY_file=open('./'+str(NOESY_name),'r')
   #  NOESY=NOESY_file.readlines()
@@ -1977,7 +1983,7 @@ else:
     #### Accretion to final_assignment ####
     for index in sort:
       cluster_name=int(sort_index[0,index])
-      file_log=open('./'+directory+'/log', 'a')
+      file_log=open('./'+directory+'/log', 'a', encoding='utf-8')
       file_log.write('Isolated peak # '+str(cluster_name)+'\n')
       
       previous_assignments=[[],[]]
@@ -2023,7 +2029,7 @@ else:
           #####OUT: Test whether peak assignment is not already used #######
           if not line in possible_peak_assignments2keep:possible_peak_assignments2keep.append(line)
       possible_peak_assignments=list(possible_peak_assignments2keep)
-      report_follow=open('./'+directory+'/'+path_name+'/'+logFile_name, 'a')
+      report_follow=open('./'+directory+'/'+path_name+'/'+logFile_name, 'a', encoding='utf-8')
       report_follow.write('##########  Peak alone : '+str(cluster_name)+'\n')
       report_follow.write('assignment table length: '+str(len(possible_peak_assignments))+'\n'+str(possible_peak_assignments)+'\n')
       report_follow.close() 
@@ -2052,7 +2058,7 @@ else:
         else:pass
       sum_out=peak_matrix_Scoring[involved_peak,:][:,keep2test].sum()
       
-      file_test=open('./'+directory+'/test', 'a')
+      file_test=open('./'+directory+'/test', 'a', encoding='utf-8')
       file_test.write('ISO   '+
                       '\tclus: '+str(cluster_name)+(5-len(str(cluster_name)))*' '+
                       '\t#peak: '+str(len(involved_peak))+(3-len(str(len(involved_peak))))*' '+
@@ -2074,7 +2080,7 @@ else:
       archive_assignment_result_previous=archive_assignment_result
       archive_assignment_result={}
       list_of_files=os.listdir('./'+directory+'/run/temp/')
-      size=len(list_of_files)/cpu
+      size=len(list_of_files)//cpu
       size_reste=len(list_of_files)%cpu 
       list_of_file_index=[]
       if size!=0:
@@ -2122,11 +2128,11 @@ else:
       Time_end=time.datetime.now()      
       print('Tc= '+str(P)+'; '+str(Time_end-Time_start).split('.')[0].split('.')[0], ' => ',str(round(100*len(list_of_peaks)/float(len(HMQC_peak_list)),1)),'%')
       
-      report_follow=open('./'+directory+'/'+path_name+'/'+logFile_name, 'a')
+      report_follow=open('./'+directory+'/'+path_name+'/'+logFile_name, 'a', encoding='utf-8')
       for peak in list(archive_assignment_result.keys()):
           for methyl in archive_assignment_result[peak]:
             try:
-              if re.search('\w(\d+)\w',str(methyl)).group(1)==re.search('(\d+)\w', peak).group(1):
+              if re.search(r'\w(\d+)\w',str(methyl)).group(1)==re.search(r'(\d+)\w', peak).group(1):
                 if archive_assignment_result[peak][methyl]==highest_score:report_follow.write('R* ')
                 else:report_follow.write('R  ')
                 break
@@ -2142,8 +2148,8 @@ else:
     outputing(highest_score,peak_matrix_Scoring)
 
 ########STATS FILE#######################################################################
-try:file=open('./'+directory+'/Output/hmqc_iso.list', 'r')
-except IOError:file=open('./'+directory+'/Output/hmqc.list', 'r')
+try:file=open('./'+directory+'/Output/hmqc_iso.list', 'r', encoding='utf-8')
+except IOError:file=open('./'+directory+'/Output/hmqc.list', 'r', encoding='utf-8')
 histo_ambiguity={}
 for peakline in file.readlines()[2:]:
   if peakline.count('NotAss')==0:
@@ -2161,7 +2167,7 @@ tot_ass=0
 tot_met=0
 sorted_histo_keys=[int(i) for i in list(histo_ambiguity.keys())]
 sorted_histo_keys.sort()
-file_log=open('./'+directory+'/log', 'a')
+file_log=open('./'+directory+'/log', 'a', encoding='utf-8')
 file_log.write('\n\n\nSome statistics...\n')
 for key in sorted_histo_keys:
   val=histo_ambiguity[str(key)]

@@ -105,10 +105,14 @@ for LowCut in lowCuts:
 		outcolumns.append(str(LowCut) + val)
 # out_table = pd.DataFrame(columns=[outcolumns])
 
+# Use dictionaries instead of exec() for dynamic dataframe creation
+summaries = {}
+pdb_summaries = {}
+
 for method in LV_Labeling:
-	exec(method + "_summary = pd.DataFrame(columns=[outcolumns])")
-	for lowCut in lowCuts: 
-		exec(method + "_"+ str(lowCut) + "_PDB_summary = pd.DataFrame(columns = ['Resid','type'])")
+	summaries[f"{method}_summary"] = pd.DataFrame(columns=[outcolumns])
+	for lowCut in lowCuts:
+		pdb_summaries[f"{method}_{lowCut}_PDB_summary"] = pd.DataFrame(columns = ['Resid','type'])
 
 
 Labeled = {'I':['CD1'],'M':['CE'],'A':['CB'], 'T':['CG2'],'L':['CD1','CD2'], 'V':['CG1','CG2']}
@@ -124,16 +128,17 @@ LV_entries = []
 ## Generates a dictionary All_PDB_entries[methyl] = [(methyl, type, atom, x, y, z)]
 ###---------------------------------------------------------------------------
 
-for line in open(pdb_name):
-	if line[0:4] == "ATOM" or line[0:4] == 'HETA':
-		if line[17:20].strip() in list(AAA_dict.keys()):
-			if line[12:16].strip() == 'CA':
-				SEQ.append(AAA_dict[line[17:20].strip()])
-			if AAA_dict[line[17:20].strip()] in list(Labeled.keys()) and line[12:16].strip() in Labeled[AAA_dict[line[17:20].strip()]]:
-				methyl = AAA_dict[line[17:20].strip()] + line[22:26].strip() + '-' + line[12:16].strip()
-				All_PDB_entries[methyl] =[methyl,AAA_dict[line[17:20].strip()], line[12:16].strip(), float(line[30:38]), float(line[38:46]), float(line[46:54])]
-				PDB_entries.append(methyl)
-				if methyl[0] in ['L','V']: LV_entries.append(methyl)
+with open(pdb_name, 'r', encoding='utf-8') as pdb_file:
+    for line in pdb_file:
+        if line[0:4] == "ATOM" or line[0:4] == 'HETA':
+            if line[17:20].strip() in list(AAA_dict.keys()):
+                if line[12:16].strip() == 'CA':
+                    SEQ.append(AAA_dict[line[17:20].strip()])
+                if AAA_dict[line[17:20].strip()] in list(Labeled.keys()) and line[12:16].strip() in Labeled[AAA_dict[line[17:20].strip()]]:
+                    methyl = AAA_dict[line[17:20].strip()] + line[22:26].strip() + '-' + line[12:16].strip()
+                    All_PDB_entries[methyl] =[methyl,AAA_dict[line[17:20].strip()], line[12:16].strip(), float(line[30:38]), float(line[38:46]), float(line[46:54])]
+                    PDB_entries.append(methyl)
+                    if methyl[0] in ['L','V']: LV_entries.append(methyl)
 
 protonsDF = pd.DataFrame(index=LV_Labeling)
 
@@ -179,7 +184,7 @@ for method in LV_Labeling:
 	pdf1 = PdfPages(outname + '_globalnetworks_' + method + '.pdf')
 	pdf2 = PdfPages(outname + '_subnetworsks_'+ method + '.pdf')
 	pdf3 = PdfPages(outname + '_local_networks_'+ method + '.pdf')
-	PDB_Summary = eval(method + "_"+ str(lowCut) + "_PDB_summary")
+	PDB_Summary = pdb_summaries[f"{method}_{lowCut}_PDB_summary"]
 	method_atoms = []
 	allowed_atoms = Allowd[method]
 	for entry in PDB_entries:
@@ -365,7 +370,7 @@ for method in LV_Labeling:
 							if 'L' in me: oLcount+=1
 							if 'A' in me: oAcount+=1
 							if 'T' in me: oTcount+=1
-			out_table = eval(method + "_summary")
+			out_table = summaries[f"{method}_summary"]
 			out_table.loc[labeling + '_Total' ,'Expected'] =len(PDB_atoms)
 			out_table.loc[labeling + '_Total' ,str(lowCut)+'A_NOE'] =PDB_Summary[labeling + '_NOE'].sum()
 			out_table.loc[labeling + '_Total' ,str(lowCut)+'A_NOE/me'] = np.round(float(PDB_Summary[labeling + '_NOE'].sum())/float(len(PDB_atoms)),2)
@@ -554,7 +559,7 @@ for lowCut in lowCuts:
 	xvals = [0,1,2,3,4,5]
 	Summary_limits = []
 	for method in LV_Labeling:
-		out_table = eval(method + "_summary")
+		out_table = summaries[f"{method}_summary"]
 		out_table.fillna(0.0)
 		for methyls in Labelings:
 			for me in methyls:
@@ -564,7 +569,7 @@ for lowCut in lowCuts:
 		col+=1
 		row=-1
 		for method in LV_Labeling:
-			out_table = eval(method + "_summary")
+			out_table = summaries[f"{method}_summary"]
 			row+=1
 			xval = []
 			xlabels = []
@@ -634,9 +639,9 @@ for lowCut in lowCuts:
 	ax3 = fig1.add_subplot(gspec1[0,3])
 	t1 = np.array([100.0,100.0,100.0,100.0,100.0])
 	sym2, sym3 ,mono2, mono3, stero2, stero3= [],[],[],[],[],[]
-	sym_table = eval("sym_summary")
-	mono_table = eval("mono_summary")
-	stero_table = eval("stero_summary")
+	sym_table = summaries["sym_summary"]
+	mono_table = summaries["mono_summary"]
+	stero_table = summaries["stero_summary"]
 	for methyls in Labelings:
 		sym2.append(float(sym_table.loc[methyls + '_Total' ,str(lowCut)+'A_All']))
 		sym3.append(float(sym_table.loc[methyls + '_Total' ,str(lowCut)+'A_Unambiguous']))
@@ -678,7 +683,7 @@ for lowCut in lowCuts:
 		col+=1
 		row=-1
 		for method in LV_Labeling:
-			out_table = eval(method + "_summary")
+			out_table = summaries[f"{method}_summary"]
 			row+=1
 			xval = []
 			xlabels = []

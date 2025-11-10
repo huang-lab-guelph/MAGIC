@@ -399,7 +399,7 @@ def build_assignment(index):
                 file_log.write(str(index.index(iii)+1)+'/'+str(len(index))+'\n')
                 file_log.close()            
                 file_name=list_of_files[iii]
-                file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(file_name), 'r')
+                file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(file_name), 'rb')
                 assignment_archive_FINAL=pickle.load(file)
                 file.close()         
                 if len(assignment_archive)==0:
@@ -460,18 +460,18 @@ def build_assignment(index):
                     report_follow.close()
                     assignment_archive=list(assignment_archive_sorted)
                     assignment_archive_sorted=[]
-                    number_of_file=int((len(assignment_archive)-1))/int(file_size)
+                    number_of_file=int((len(assignment_archive)-1))//int(file_size)
                     number_of_file_rest=(len(assignment_archive)-1)%int(file_size)          
                     for i in range(number_of_file):
                         assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[i*file_size+1:(i+1)*file_size+1]
-                        file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                        pickle.dump(assignment_archive_to_save,file,-1)
+                        file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'wb')
+                        pickle.dump(assignment_archive_to_save,file,protocol=pickle.HIGHEST_PROTOCOL)
                         file.close()
                         index_files+=1
                     if number_of_file_rest!=0:
                         assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[number_of_file*file_size+1:]
-                        file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                        pickle.dump(assignment_archive_to_save,file,-1)
+                        file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'wb')
+                        pickle.dump(assignment_archive_to_save,file,protocol=pickle.HIGHEST_PROTOCOL)
                         file.close()
                         index_files+=1
                     assignment_archive=[assignment_archive[0]] 
@@ -503,24 +503,24 @@ def build_assignment(index):
                   assignment_archive=list(assignment_archive_sorted)
                   assignment_archive_sorted=[]                 
                   if (len(assignment_archive)-1)>file_size:
-                    number_of_file=(len(assignment_archive)-1)/int(file_size)
+                    number_of_file=(len(assignment_archive)-1)//int(file_size)
                     number_of_file_rest=(len(assignment_archive)-1)%int(file_size)
                     for i in range(number_of_file):
                       assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[i*file_size+1:(i+1)*file_size+1]
-                      file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                      pickle.dump(assignment_archive_to_save,file,-1)
+                      file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'wb')
+                      pickle.dump(assignment_archive_to_save,file,protocol=pickle.HIGHEST_PROTOCOL)
                       file.close()
                       index_files+=1
                     if number_of_file_rest!=0:
                       assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[number_of_file*file_size+1:]
-                      file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                      pickle.dump(assignment_archive_to_save,file,-1)
+                      file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'wb')
+                      pickle.dump(assignment_archive_to_save,file,protocol=pickle.HIGHEST_PROTOCOL)
                       file.close()
                       index_files+=1
                     assignment_archive=[]
                   else:
-                    file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                    pickle.dump(assignment_archive,file,-1)
+                    file=open('./'+str(Time_start).split('.')[0].split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'wb')
+                    pickle.dump(assignment_archive,file,protocol=pickle.HIGHEST_PROTOCOL)
                     file.close()                    
                     assignment_archive=[]
               max=highest_score_inloop
@@ -692,7 +692,7 @@ def outputing(highest_score,peak_matrix_Scoring):
           peak=HMQC_peak_list[int(peaks[i])]
           methyl=metrics[2][int(methyls[i])]  
           try:
-            if re.search('\w(\d+)\w',str(methyl)).group(1)==re.search('(\d+)\w', peak).group(1):correct+=1
+            if re.search(r'\w(\d+)\w',str(methyl)).group(1)==re.search(r'(\d+)\w', peak).group(1):correct+=1
           except AttributeError:pass
           total+=1
           freq=getattr(result, str(peak)+'_freq')
@@ -819,17 +819,17 @@ def outputing(highest_score,peak_matrix_Scoring):
             else:pass
             split0=split[0].split('-')
             res1i=int(re.search('[A-Z]([0-9]+)[A-Z]', split0[0]).group(1))
-            name1i=re.search('[0-9]+(\w+)', split0[0]).group(1)
+            name1i=re.search(r'[0-9]+(\w+)', split0[0]).group(1)
             res2i=int(re.search('[A-Z]([0-9]+)[A-Z]', split0[1]).group(1))
-            name2i=re.search('[0-9]+(\w+)', split0[1]).group(1)
+            name2i=re.search(r'[0-9]+(\w+)', split0[1]).group(1)
             sm=float(split[4])
             for line_2 in noelist[2:]:
               split=line_2.split()
               split0f=split[0].split('-')
               res1f=int(re.search('[A-Z]([0-9]+)[A-Z]', split0f[0]).group(1))
-              name1f=re.search('[0-9]+(\w+)', split0f[0]).group(1)
+              name1f=re.search(r'[0-9]+(\w+)', split0f[0]).group(1)
               res2f=int(re.search('[A-Z]([0-9]+)[A-Z]', split0f[1]).group(1))
-              name2f=re.search('[0-9]+(\w+)', split0f[1]).group(1)  
+              name2f=re.search(r'[0-9]+(\w+)', split0f[1]).group(1)  
               if (res1f==res2i and name1f==name2i and res1i==res2f and name1i==name2f):
                 sf=float(split[4])
                 sm=(sm+sf)/float(2)
@@ -857,7 +857,7 @@ def outputing(highest_score,peak_matrix_Scoring):
         if split[3][0]!='N':
             split0=split[0].split('-')
             res1i=int(re.search('[A-Z]([0-9]+)[A-Z]', split0[0]).group(1))
-            name1i=re.search('[0-9]+(\w+)', split0[0]).group(1)
+            name1i=re.search(r'[0-9]+(\w+)', split0[0]).group(1)
             try:
               score=float(split[4])
               M4=float(M)
@@ -882,6 +882,12 @@ def outputing(highest_score,peak_matrix_Scoring):
 ##########################################################################################
 ################################### MAIN STREAM ##########################################
 #
+# Set multiprocessing start method for macOS compatibility
+try:
+    mp.set_start_method('fork', force=True)
+except RuntimeError:
+    pass  # Already set
+
 Time_start=time.datetime.now()
 os.makedirs('./'+str(Time_start).split('.')[0])
 os.makedirs('./'+str(Time_start).split('.')[0]+'/Input')
@@ -961,8 +967,8 @@ peak_matrix_Scoring,peak_matrix_clustering,HMQC_peak_list,overlap_topo,RiskyPeak
 
 #print 'average_PER10', np.percentile(peak_matrix_Scoring[np.where(peak_matrix_Scoring>0)],10)
 #if len(HMQC_peak_list)<=100:scaler=float(1)
-#else:scaler=len(HMQC_peak_list)/float(100)
-scaler=len(HMQC_peak_list)/float(100)
+#else:scaler=len(HMQC_peak_list)//100
+scaler=len(HMQC_peak_list)//100
 #print 'median',np.median(peak_matrix_Scoring.sum(axis=0))
 #print 'mean',np.mean(peak_matrix_Scoring.sum(axis=0))
 FILTER_start=np.mean(peak_matrix_Scoring.sum(axis=0))#*len(HMQC_peak_list)
@@ -976,11 +982,11 @@ metrics=distances(pdb, max_distance,lowCut,'run')
 
 methyl_to_add=[]
 for line in SEQ:
-  resID=re.search('\w(\d+)', line).group(1)
+  resID=re.search(r'\w(\d+)', line).group(1)
   resTYPE=line[0]
   flag=0
   for methyl in metrics[2]:
-    methylID=re.search('\w(\d+)\w', methyl).group(1)
+    methylID=re.search(r'\w(\d+)\w', methyl).group(1)
     if methylID==resID:
       flag=1
       break
@@ -1060,10 +1066,10 @@ report.close()
 assignment_locked_methyl=[]
 for i in assignment_locked_peak:
   name=HMQC_peak_list[i]
-  assignment_name=name[0]+re.search('\w(\d+)', name).group(1)
+  assignment_name=name[0]+re.search(r'\w(\d+)', name).group(1)
   flag_assigned=0
   for j in range(len(metrics[2])):
-    if metrics[2][j][0]+re.search('\w(\d+)', metrics[2][j]).group(1)==assignment_name:
+    if metrics[2][j][0]+re.search(r'\w(\d+)', metrics[2][j]).group(1)==assignment_name:
       assignment_locked_methyl.append(j)
       flag_assigned=1
   if flag_assigned==0:
@@ -1218,8 +1224,8 @@ for name_peak in list_peak:
           report.write(str(peak)+'=='+str(methyl)+' # ')
         report.write('\n')
       report.close()
-      file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(name_peak), 'w')
-      pickle.dump(assignment_archive,file,-1)
+      file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(name_peak), 'wb')
+      pickle.dump(assignment_archive,file,protocol=pickle.HIGHEST_PROTOCOL)
       file.close()
       assignment_archive=[]      
 ######################## iterative RUNs ####################
@@ -1273,7 +1279,7 @@ for P in P_list:
         if flag_continue==1:continue
         #######OUT: Skip peak assignment if overlapping already assigned peak ########       
         set_of_peaks=getattr(selected_peaks_clusters, str(list_peak[name_peak_index]))
-        file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(list_peak[name_peak_index]), 'r')
+        file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(list_peak[name_peak_index]), 'rb')
         assignment_archive_old=pickle.load(file)
         file.close()
         
@@ -1307,7 +1313,7 @@ for P in P_list:
         
         for line in sorting:
           peak=line[1]
-          file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(list_peak[name_peak_index]), 'r')
+          file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(list_peak[name_peak_index]), 'rb')
           assignment_archive_old=pickle.load(file)
           file.close()
           All_possible_assignment=[]  
@@ -1342,7 +1348,7 @@ for P in P_list:
             for i in range(m):
               list_of_assignment_index.append([j for j in range(size*i,(i+1)*size)])
           if reste!=0:list_of_assignment_index.append([j for j in range(m*size,m*size+reste)])   
-          number_of_pool=len(list_of_assignment_index)/cpu
+          number_of_pool=len(list_of_assignment_index)//cpu
           number_of_pool_rest=len(list_of_assignment_index)%cpu
           number_of_files=0
           for i in range(number_of_pool):
@@ -1357,8 +1363,8 @@ for P in P_list:
                 if len(pool_result[j][0])!=0:assignments_table.append(pool_result[j][0])
               pool_result=[]
               if len(assignments_table)!=0:
-                file=open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_'+str(number_of_files), 'w')
-                pickle.dump(assignments_table,file,-1)
+                file=open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_'+str(number_of_files), 'wb')
+                pickle.dump(assignments_table,file,protocol=pickle.HIGHEST_PROTOCOL)
                 file.close()
                 assignments_table=[]
                 number_of_files+=1 
@@ -1375,8 +1381,8 @@ for P in P_list:
               pool_result=[]
 
               if len(assignments_table)!=0:
-                file=open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_'+str(number_of_files), 'w')
-                pickle.dump(assignments_table,file,-1)
+                file=open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_'+str(number_of_files), 'wb')
+                pickle.dump(assignments_table,file,protocol=pickle.HIGHEST_PROTOCOL)
                 file.close()
                 assignments_table=[]
                 number_of_files+=1
@@ -1396,7 +1402,7 @@ for P in P_list:
           assignment_archive=[]
           list_of_files=os.listdir('./'+str(Time_start).split('.')[0]+'/run/Local/temp/')
           for i in range(len(list_of_files)):
-              file=open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/'+str(list_of_files[i]), 'r')
+              file=open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/'+str(list_of_files[i]), 'rb')
               element=pickle.load(file)
               file.close()
               for j in range(len(element)):
@@ -1443,8 +1449,8 @@ for P in P_list:
               report.write(str(peak)+'=='+str(methyl)+' # ')
             report.write('\n')
           report.close()
-          file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(list_peak[name_peak_index]), 'w')
-          pickle.dump(assignment_archive,file,-1)
+          file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(list_peak[name_peak_index]), 'wb')
+          pickle.dump(assignment_archive,file,protocol=pickle.HIGHEST_PROTOCOL)
           file.close()
           assignment_archive=[] 
 #####################################################################################################      
@@ -1459,8 +1465,8 @@ for P in P_list:
       if not os.path.exists('./'+str(Time_start).split('.')[0]+'/run/temp'):
         os.makedirs('./'+str(Time_start).split('.')[0]+'/run/temp')
         assignment_archive_FINAL=[assignment_locked_peak,[assignment_locked_methyl,]]
-        file=open('./'+str(Time_start).split('.')[0]+'/run/temp/100000000#', 'w')
-        pickle.dump(assignment_archive_FINAL,file,-1)
+        file=open('./'+str(Time_start).split('.')[0]+'/run/temp/100000000#', 'wb')
+        pickle.dump(assignment_archive_FINAL,file,protocol=pickle.HIGHEST_PROTOCOL)
         file.close()
         highest_score=0
         flag_alone=0
@@ -1473,7 +1479,7 @@ for P in P_list:
         counter=0
         sort_index=np.zeros((2,len(list_peak)))          
         for i in range(len(list_peak)):
-            file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(i), 'r')
+            file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(i), 'rb')
             assignment_archive_clusterX=pickle.load(file)
             file.close()
             #possible_peak_assignments=getattr(result, str(list_peak[i])+'_possible_peak_assignments')
@@ -1504,14 +1510,14 @@ for P in P_list:
               continue
             #######OUT: Skip peak assignment if overlapping already assigned peak ########
             
-            file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(cluster_name), 'r')
+            file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(cluster_name), 'rb')
             assignment_archive_clusterX=pickle.load(file)
             file.close()
             
             #print 'assignment_archive_clusterX',assignment_archive_clusterX
             
             list_of_files=os.listdir('./'+str(Time_start).split('.')[0]+'/run/temp/')
-            file=open('./'+str(Time_start).split('.')[0]+'/run/temp/'+str(list_of_files[0]), 'r')
+            file=open('./'+str(Time_start).split('.')[0]+'/run/temp/'+str(list_of_files[0]), 'rb')
             assignment_previous=pickle.load(file)
             file.close()
             
@@ -1583,8 +1589,8 @@ for P in P_list:
                 list2stock.append([involved_peak,line_to_add,line[2]])					#EDIT
 
             #EDIT
-            file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(cluster_name), 'w')
-            pickle.dump(list2stock,file,-1)
+            file=open('./'+str(Time_start).split('.')[0]+'/run/Local/archive/archive_'+str(cluster_name), 'wb')
+            pickle.dump(list2stock,file,protocol=pickle.HIGHEST_PROTOCOL)
             file.close()
             #EDIT         
                           
@@ -1678,7 +1684,7 @@ for P in P_list:
         archive_assignment_result_previous=archive_assignment_result
         archive_assignment_result={}
         shuffle(list_of_files)
-        size=len(list_of_files)/cpu
+        size=len(list_of_files)//cpu
         size_reste=len(list_of_files)%cpu 
         list_of_file_index=[]
         if size!=0:
@@ -1744,7 +1750,7 @@ for P in P_list:
         for peak in list(archive_assignment_result.keys()):
           for methyl in archive_assignment_result[peak]:
             try:
-              if re.search('\w(\d+)\w',str(methyl)).group(1)==re.search('(\d+)\w', peak).group(1):
+              if re.search(r'\w(\d+)\w',str(methyl)).group(1)==re.search(r'(\d+)\w', peak).group(1):
                 report_follow.write('R  ') 
                 break
             except AttributeError:pass
@@ -1891,7 +1897,7 @@ while cycler==0:
       archive_assignment_result_previous=archive_assignment_result
       archive_assignment_result={}
       list_of_files=os.listdir('./'+str(Time_start).split('.')[0]+'/run/temp/')
-      size=len(list_of_files)/cpu
+      size=len(list_of_files)//cpu
       size_reste=len(list_of_files)%cpu 
       list_of_file_index=[]
       if size!=0:
@@ -1976,7 +1982,7 @@ while cycler==0:
       for peak in list(archive_assignment_result.keys()):
           for methyl in archive_assignment_result[peak]:
             try:
-              if re.search('\w(\d+)\w',str(methyl)).group(1)==re.search('(\d+)\w', peak).group(1):
+              if re.search(r'\w(\d+)\w',str(methyl)).group(1)==re.search(r'(\d+)\w', peak).group(1):
                 report_follow.write('R  ') 
                 break
             except AttributeError:pass

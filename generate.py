@@ -5,8 +5,6 @@ import math as m
 import datetime as time
 import sys
 import os
-import multiprocessing as mp
-import pickle
 import shutil
 import resource
 
@@ -23,16 +21,16 @@ class obj:
 result=obj()    
  
 labeling=str(sys.argv[3])
-HMQC_file=open('./'+str(sys.argv[1]),'r')
+HMQC_file=open('./'+str(sys.argv[1]),'r', encoding='utf-8')
 HMQC=HMQC_file.readlines()
 HMQC_file.close()
-Seq_file=open('./'+str(sys.argv[2]),'r')
+Seq_file=open('./'+str(sys.argv[2]),'r', encoding='utf-8')
 SEQ=Seq_file.read()
 Seq_file.close()
 seq_starter=int(sys.argv[4])
 flag_geminal=0
 try:
-  CCH_file=open('./'+str(sys.argv[5]),'r')
+  CCH_file=open('./'+str(sys.argv[5]),'r', encoding='utf-8')
   CCH=CCH_file.readlines()
   CCH_file.close()
   flag_geminal=1
@@ -42,7 +40,7 @@ SEQ=SEQ.replace('\n','')
 print(SEQ)
 
 A,I,L,M,T,V=0,0,0,0,0,0
-seq_output=open('./seq.auto','w')
+seq_output=open('./seq.auto','w', encoding='utf-8')
 for i in range(len(SEQ)):
   if (SEQ[i]=='A' and SEQ[i] in labeling):
     seq_output.write('A'+str(seq_starter+i)+'\n')
@@ -116,7 +114,7 @@ for i in range(len(HMQC)):
   peak_type[i,3]=PV
   peak_type[i,4]=PM
   peak_type[i,5]=PT
-HMQC_newfile=open('./new_'+str(sys.argv[1]),'w')
+HMQC_newfile=open('./new_'+str(sys.argv[1]),'w', encoding='utf-8')
 tot_0=0
 tot_1=0
 tot_2=0
@@ -146,12 +144,12 @@ for i in range(peak_type.shape[0]):
 HMQC_newfile.close()
 ############Automatic first guess for geminal pairing according to short mixing time CCH noesy#############
 if flag_geminal==1:
-  HMQC_newfile=open('./new_'+str(sys.argv[1]),'r')
+  HMQC_newfile=open('./new_'+str(sys.argv[1]),'r', encoding='utf-8')
   HMQC=HMQC_newfile.readlines()
   HMQC_newfile.close()
   os.remove('./new_'+str(sys.argv[1]))
-  HMQC_newfile=open('./new_'+str(sys.argv[1]),'w')
-  CHH_geminal=open('./CCH_geminal_assigned.list','w')
+  HMQC_newfile=open('./new_'+str(sys.argv[1]),'w', encoding='utf-8')
+  CHH_geminal=open('./CCH_geminal_assigned.list','w', encoding='utf-8')
   w1tol,w2tol,w3tol=0.1,0.1,0.01
   for line_hmqc in HMQC:
       split_hmqc=line_hmqc.split()
