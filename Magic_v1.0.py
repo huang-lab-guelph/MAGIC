@@ -524,13 +524,13 @@ def build_assignment(index):
                         for j in range(len(assignment_archive[i+1][0])):
                           peak=HMQC_peak_list[int(assignment_archive[0][j])]
                           methyl=metrics[2][int(assignment_archive[i+1][0][j])]
-                          if assignment_collection not in assignment_collection:
+                          if peak not in assignment_collection:
                             assignment_collection[peak]={}
                             assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                           else:
-                            if assignment_collection[peak] not in assignment_collection[peak]:
+                            if methyl not in assignment_collection[peak]:
                               assignment_collection[peak][methyl]=assignment_archive[i+1][1]
-                            elif (methyl in list(assignment_collection[peak].keys()) and 
+                            elif (methyl in assignment_collection[peak] and
                               assignment_archive[i+1][1]>assignment_collection[peak][methyl]):
                               assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                       else:deleted=deleted+1
@@ -566,13 +566,13 @@ def build_assignment(index):
                       for j in range(len(assignment_archive[i+1][0])):
                         peak=HMQC_peak_list[int(assignment_archive[0][j])]
                         methyl=metrics[2][int(assignment_archive[i+1][0][j])]
-                        if assignment_collection not in assignment_collection:
+                        if peak not in assignment_collection:
                           assignment_collection[peak]={}
                           assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                         else:
-                          if assignment_collection[peak] not in assignment_collection[peak]:
+                          if methyl not in assignment_collection[peak]:
                             assignment_collection[peak][methyl]=assignment_archive[i+1][1]
-                          elif (methyl in list(assignment_collection[peak].keys()) and 
+                          elif (methyl in assignment_collection[peak] and
                             assignment_archive[i+1][1]>assignment_collection[peak][methyl]):
                             assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                     else:deleted=deleted+1
@@ -647,7 +647,7 @@ def build_assignment_peak(index):
                 peak=HMQC_peak_list[int(index_matrix_noe[i])]
                 methyl=metrics[2][int(index_matrix_methyls[i])]
                 if peak in list(archive_assignment_result.keys()):
-                  if archive_assignment_result[peak] not in archive_assignment_result[peak]:
+                  if methyl not in archive_assignment_result[peak]:
                     flag_stop=1
                     break
                   else:pass
@@ -1628,7 +1628,7 @@ for P in P_list:
                     peak=HMQC_peak_list[int(assignment_archive_clusterX[0][0][i])]
                     methyl=metrics[2][int(line[1][i])]
                     if peak in list(archive_assignment_result.keys()):
-                      if archive_assignment_result[peak] not in archive_assignment_result[peak]:
+                      if methyl not in archive_assignment_result[peak]:
                         flag_stop=1
                         break
                       else:pass
@@ -1785,9 +1785,9 @@ for P in P_list:
         for element in pool_result:
               archive=element[0]
               for peak in list(archive.keys()):
-                if archive_assignment_result not in archive_assignment_result:archive_assignment_result[peak]={}
+                if peak not in archive_assignment_result:archive_assignment_result[peak]={}
                 for methyl in list(archive[peak].keys()):
-                  if archive_assignment_result[peak] not in archive_assignment_result[peak]:
+                  if methyl not in archive_assignment_result[peak]:
                     archive_assignment_result[peak][methyl]=archive[peak][methyl]
                   if (methyl in list(archive_assignment_result[peak].keys()) and
                       archive[peak][methyl]>archive_assignment_result[peak][methyl]):
@@ -1801,9 +1801,9 @@ for P in P_list:
                   for element in pool_result:
                     archive=element[0]
                     for peak in list(archive.keys()):
-                      if archive_assignment_result not in archive_assignment_result:archive_assignment_result[peak]={}
+                      if peak not in archive_assignment_result:archive_assignment_result[peak]={}
                       for methyl in list(archive[peak].keys()):
-                        if archive_assignment_result[peak] not in archive_assignment_result[peak]:
+                        if methyl not in archive_assignment_result[peak]:
                           archive_assignment_result[peak][methyl]=archive[peak][methyl]
                         if (methyl in list(archive_assignment_result[peak].keys()) and  
                             archive[peak][methyl]>archive_assignment_result[peak][methyl]):
@@ -1997,9 +1997,9 @@ while cycler==0:
       for element in pool_result:
         archive=element[0]
         for peak in list(archive.keys()):
-          if archive_assignment_result not in archive_assignment_result:archive_assignment_result[peak]={}
+          if peak not in archive_assignment_result:archive_assignment_result[peak]={}
           for methyl in list(archive[peak].keys()):
-            if archive_assignment_result[peak] not in archive_assignment_result[peak]:
+            if methyl not in archive_assignment_result[peak]:
               archive_assignment_result[peak][methyl]=archive[peak][methyl]
             if (methyl in list(archive_assignment_result[peak].keys())
               and archive[peak][methyl]>archive_assignment_result[peak][methyl]):
@@ -2013,9 +2013,9 @@ while cycler==0:
         for element in pool_result:
           archive=element[0]
           for peak in list(archive.keys()):
-            if archive_assignment_result not in archive_assignment_result:archive_assignment_result[peak]={}
+            if peak not in archive_assignment_result:archive_assignment_result[peak]={}
             for methyl in list(archive[peak].keys()):
-              if archive_assignment_result[peak] not in archive_assignment_result[peak]:
+              if methyl not in archive_assignment_result[peak]:
                 archive_assignment_result[peak][methyl]=archive[peak][methyl]
               if (methyl in list(archive_assignment_result[peak].keys())
                   and archive[peak][methyl]>archive_assignment_result[peak][methyl]):
@@ -2047,7 +2047,7 @@ while cycler==0:
         for peak in list(archive_assignment_result.keys()):
           if peak in list(archive_assignment_result_2save.keys()):
             for methyl in archive_assignment_result_2save[peak]:
-              if archive_assignment_result[peak] not in archive_assignment_result[peak]:
+              if methyl not in archive_assignment_result[peak]:
                 archive_assignment_result[peak][methyl]=archive_assignment_result_2save[peak][methyl]
               else:pass
           else:pass
