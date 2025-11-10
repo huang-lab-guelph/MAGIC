@@ -1122,8 +1122,10 @@ TEMP_DIR = '{}/run/temp'.format(BASE_DIR)
 os.makedirs(BASE_DIR)
 os.makedirs(INPUT_DIR)
 os.makedirs(OUTPUT_DIR)
-shutil.copy('./'+str(sys.argv[1]), '{}/{}'.format(INPUT_DIR, str(sys.argv[1])))
-shutil.copy('./'+str(sys.argv[0]), '{}/{}'.format(INPUT_DIR, str(sys.argv[0])))
+# Copy input file to INPUT_DIR with just filename (not full path)
+import os.path
+shutil.copy('./'+str(sys.argv[1]), os.path.join(INPUT_DIR, os.path.basename(str(sys.argv[1]))))
+shutil.copy('./'+str(sys.argv[0]), os.path.join(INPUT_DIR, os.path.basename(str(sys.argv[0]))))
 
 file_log=open(LOG_FILE, 'w')
 file_log.write(str(Time_start).split('.')[0]+'\n')
@@ -1335,7 +1337,11 @@ for i in range(N):
       row = matrix2.getrow(i).toarray().flatten()
       neighbors_with_sharing = np.argwhere(row > P)  # 2 => 1 shared neighbors, 3=>2, etc.
       if not i in neighbors_with_sharing:
-        neighbors_with_sharing=[neighbors_with_sharing[j,0] for j in range(neighbors_with_sharing.size)]
+        # Extract indices - handle both 1D and 2D results from argwhere
+        if neighbors_with_sharing.ndim == 2 and neighbors_with_sharing.shape[1] > 0:
+          neighbors_with_sharing = [neighbors_with_sharing[j,0] for j in range(neighbors_with_sharing.shape[0])]
+        else:
+          neighbors_with_sharing = neighbors_with_sharing.flatten().tolist()
         neighbors_with_sharing.append(i)
         neighbors_with_sharing=np.array(neighbors_with_sharing).reshape((len(neighbors_with_sharing),1))
       setattr(selected_peaks_clusters, str(i), neighbors_with_sharing)
@@ -1501,7 +1507,11 @@ for P in P_list:
       for i in range(N):
         neighbors_with_sharing=np.argwhere(matrix2[i,:]>=P)
         if not i in neighbors_with_sharing:
-          neighbors_with_sharing=[neighbors_with_sharing[j,0] for j in range(neighbors_with_sharing.size)]
+          # Extract indices - handle both 1D and 2D results from argwhere
+          if neighbors_with_sharing.ndim == 2 and neighbors_with_sharing.shape[1] > 0:
+            neighbors_with_sharing = [neighbors_with_sharing[j,0] for j in range(neighbors_with_sharing.shape[0])]
+          else:
+            neighbors_with_sharing = neighbors_with_sharing.flatten().tolist()
           neighbors_with_sharing.append(i)
           neighbors_with_sharing=np.array(neighbors_with_sharing).reshape((len(neighbors_with_sharing),1))
         setattr(selected_peaks_clusters, str(i), neighbors_with_sharing)  
@@ -1532,11 +1542,13 @@ for P in P_list:
         try:                 
           new_peaks=[]
           for peak in set_of_peaks:
-            if not peak in assignment_archive_old[0][0]:
+            # Handle potential numpy array comparison
+            peak_val = peak[0] if hasattr(peak, '__getitem__') and not isinstance(peak, (int, float)) else peak
+            if peak_val not in assignment_archive_old[0][0]:
               flag_continue=0
-              for overpeak in overlap_topo[peak[0]]:
+              for overpeak in overlap_topo[peak_val]:
                 if (overpeak in assignment_archive_old[0][0] or overpeak in new_peaks):flag_continue=1
-              if flag_continue==0:new_peaks.append(peak[0])          
+              if flag_continue==0:new_peaks.append(peak_val)          
           setattr(result, str(list_peak[name_peak_index])+'_new_peaks',new_peaks)
         except IndexError:continue
         
