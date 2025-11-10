@@ -172,7 +172,14 @@ new_*.list
 seq.auto
 CCH_geminal_assigned.list
 start.txt
+start_*.txt
 log
+*.log
+
+# Test and optimization reports
+optimization_test*.txt
+optimization_report*.txt
+*_performance_results.md
 
 # Virtual environment
 magic_env/
@@ -180,4 +187,12 @@ magic_env/
 # Migration helper scripts (can be removed after migration)
 fix_*.py
 
+# Backup files
+*.bak
+*.backup
+
+# Test data directories (keep specific ones, ignore generic)
 yme1l_201/
+
+# Script-specific test files
+quick_*_test.py
