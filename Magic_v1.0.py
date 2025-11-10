@@ -12,6 +12,7 @@ import resource
 import psutil
 from random import shuffle
 from scipy.spatial.distance import cdist
+from scipy import sparse  # OPTIMIZED: Added for sparse matrix operations
 from collections import Counter
 
 # Pre-compile regex patterns for performance
@@ -19,6 +20,28 @@ RESIDUE_PATTERN = re.compile(r'[A-Z]([0-9]+)[A-Z]')
 NAME_PATTERN = re.compile(r'[0-9]+(\w+)')
 RESIDUE_SIMPLE = re.compile(r'([A-Z])([0-9]+)')
 ATOM_NAME_PATTERN = re.compile(r'[A-Z]([0-9]+)([A-Z]+[0-9]*)')
+
+# OPTIMIZED: Helper functions for sparse matrix operations
+def ensure_sparse(matrix):
+    """Convert matrix to sparse CSR format if not already sparse."""
+    if not sparse.issparse(matrix):
+        return sparse.csr_matrix(matrix)
+    return matrix
+
+def ensure_dense(matrix):
+    """Convert sparse matrix to dense array if necessary."""
+    if sparse.issparse(matrix):
+        return matrix.toarray()
+    return matrix
+
+def sparse_submatrix(matrix, row_indices, col_indices):
+    """Efficiently extract submatrix from sparse matrix."""
+    if sparse.issparse(matrix):
+        # For sparse matrices, use efficient indexing
+        return matrix[np.ix_(row_indices, col_indices)]
+    else:
+        # For dense matrices, use standard indexing
+        return matrix[np.ix_(row_indices, col_indices)]
 
 class obj:
   pass
@@ -229,16 +252,22 @@ def Extract_3DPeaks(object, peak_list_3d, peak_list_2d_CH, nuclei, tolerance):
 # Build up the matrix
 #
 def matrix_it(links, element_list, flag, factors,geminal_mark):
-  matrix=np.zeros((len(element_list),len(element_list)))
+  # OPTIMIZED: Build sparse matrices using lil_matrix (efficient for construction)
+  n = len(element_list)
+  matrix = sparse.lil_matrix((n, n))
+
   if flag=='peak':
-    matrix_scoring=np.zeros((len(element_list),len(element_list)))
-    peak_geminal=np.zeros((len(element_list),len(element_list)))  
-    for entry in geminal_mark:peak_geminal[entry[0],entry[1]]=1
-  if flag=='pdb':matrix_geminal=np.zeros((len(element_list),len(element_list)))
+    matrix_scoring = sparse.lil_matrix((n, n))
+    peak_geminal = sparse.lil_matrix((n, n))
+    for entry in geminal_mark:
+      peak_geminal[entry[0],entry[1]] = 1
+  if flag=='pdb':
+    matrix_geminal = sparse.lil_matrix((n, n))
+
   for line in links:
     i=element_list.index(line[0])
     j=element_list.index(line[1])
-    if flag=='peak':matrix[i,i]=1    
+    if flag=='peak':matrix[i,i]=1
     if flag=='pdb':
       matrix[i,j]=line[2]
       if i==j:matrix_geminal[i,j]=1
@@ -249,9 +278,16 @@ def matrix_it(links, element_list, flag, factors,geminal_mark):
         elif (line[4]==1):matrix[i,j]=math.pow(math.pow(1+float(line[5]),2)*float(line[7])*float(factors[1]/(20*chi*math.pow(float(line[3]),2))),0.5)
         elif (line[4]==2):matrix[i,j]=math.pow(math.pow(1+float(line[5]),2)*float(line[7])*float(factors[2]/(20*chi*math.pow(float(line[3]),2))),0.5)
       else:matrix[i,j]=0
-  if flag=='pdb':return matrix,matrix_geminal
+
+  # OPTIMIZED: Convert to CSR format (efficient for arithmetic operations)
+  matrix = matrix.tocsr()
+
+  if flag=='pdb':
+    matrix_geminal = matrix_geminal.tocsr()
+    return matrix,matrix_geminal
+
   if flag=='peak':
-    matrix_ri=np.zeros((len(element_list),len(element_list)))
+    matrix_ri = sparse.lil_matrix((n, n))
     for line in links:
       i=element_list.index(line[0])
       j=element_list.index(line[1])
@@ -260,7 +296,13 @@ def matrix_it(links, element_list, flag, factors,geminal_mark):
       matrix_scoring[i,j]=float(line[7])*math.pow(math.pow(1+float(line[5]),2)/(20*chi*math.pow(float(line[3]),2)),0.5)
       if matrix_scoring[i,j]<matrix_scoring[j,i]:matrix_scoring[i,j]=matrix_scoring[j,i]
       else:matrix_scoring[j,i]=matrix_scoring[i,j]
-    matrix_scoring=matrix_scoring*matrix_ri
+
+    # OPTIMIZED: Convert to CSR and use element-wise multiplication
+    matrix_ri = matrix_ri.tocsr()
+    matrix_scoring = matrix_scoring.tocsr()
+    matrix_scoring = matrix_scoring.multiply(matrix_ri)
+    peak_geminal = peak_geminal.tocsr()
+
     return matrix,matrix_scoring,peak_geminal
 # ---------------------------------------------------------------------------
 #
@@ -482,10 +524,14 @@ def build_assignment(index):
                 file.close()         
                 if len(assignment_archive)==0:
                   index_peaks=assignment_archive_FINAL[0]+involved_peak
-                  # OPTIMIZED: Use np.ix_ for efficient fancy indexing
-                  matrix_noe=peak_matrix_Scoring[np.ix_(index_peaks, index_peaks)]
+                  # OPTIMIZED: Extract submatrix from sparse matrix (efficient for sparse data)
+                  matrix_noe = sparse_submatrix(peak_matrix_Scoring, index_peaks, index_peaks)
+                  if sparse.issparse(matrix_noe):
+                    matrix_noe = matrix_noe.toarray()  # Convert to dense for element-wise operations
                   assignment_archive.append(index_peaks)
-                  matrix_noe_geminal=peak_geminal[np.ix_(index_peaks, index_peaks)]
+                  matrix_noe_geminal = sparse_submatrix(peak_geminal, index_peaks, index_peaks)
+                  if sparse.issparse(matrix_noe_geminal):
+                    matrix_noe_geminal = matrix_noe_geminal.toarray()
                 for ii in range(len(assignment_archive_FINAL[1:])):
                   for element in possible_peak_assignments:
                     index_methyls=assignment_archive_FINAL[ii+1][0]+element                                    
@@ -497,12 +543,17 @@ def build_assignment(index):
                          ):
                          flag_Stop=1
                          break         
-                    if flag_Stop==1:continue         
-                    matrix_assignment=new_metrics[0][np.ix_(index_methyls, index_methyls)]
+                    if flag_Stop==1:continue
+                    # OPTIMIZED: Extract submatrix (sparse or dense based on input)
+                    matrix_assignment = sparse_submatrix(new_metrics[0], index_methyls, index_methyls)
+                    if sparse.issparse(matrix_assignment):
+                      matrix_assignment = matrix_assignment.toarray()
                     testing=matrix_assignment*matrix_noe
                     #####Geminal scaling factor####################
                     if (flag_geminal==1 and matrix_noe_geminal.sum()>0):
-                      matrix_assignment_geminal=new_metrics[1][np.ix_(index_methyls, index_methyls)]
+                      matrix_assignment_geminal = sparse_submatrix(new_metrics[1], index_methyls, index_methyls)
+                      if sparse.issparse(matrix_assignment_geminal):
+                        matrix_assignment_geminal = matrix_assignment_geminal.toarray()
                       testing_geminal=matrix_noe_geminal*matrix_assignment_geminal
                       tot=round(testing.sum()*(1+0.2*(testing_geminal.sum()/float(matrix_noe_geminal.sum()))),3)
                     #####Geminal scaling factor
@@ -622,8 +673,13 @@ def build_assignment_peak(index):
           if total_Assignments==[]:total_Assignments=[[],[]]
           #index_matrix_noe=locked_noe+total_Assignments[0]+assignment_old[0]
           index_matrix_noe=total_Assignments[0]+assignment_old[0]
-          matrix_noe=peak_matrix_Scoring[np.ix_(index_matrix_noe, index_matrix_noe)]
-          matrix_noe_geminal=peak_geminal[np.ix_(index_matrix_noe, index_matrix_noe)]
+          # OPTIMIZED: Extract submatrix from sparse matrix
+          matrix_noe = sparse_submatrix(peak_matrix_Scoring, index_matrix_noe, index_matrix_noe)
+          if sparse.issparse(matrix_noe):
+            matrix_noe = matrix_noe.toarray()
+          matrix_noe_geminal = sparse_submatrix(peak_geminal, index_matrix_noe, index_matrix_noe)
+          if sparse.issparse(matrix_noe_geminal):
+            matrix_noe_geminal = matrix_noe_geminal.toarray()
           
           for assignment in total_Assignments[1:]:          
             #index_matrix_methyls=locked_methyl+assignment+assignment_old[1]
@@ -638,8 +694,11 @@ def build_assignment_peak(index):
                   flag_Stop=1
                   break   
             if flag_Stop==1:continue
-            matrix_assignment=new_metrics[0][np.ix_(index_matrix_methyls, index_matrix_methyls)]
-            
+            # OPTIMIZED: Extract submatrix from sparse matrix
+            matrix_assignment = sparse_submatrix(new_metrics[0], index_matrix_methyls, index_matrix_methyls)
+            if sparse.issparse(matrix_assignment):
+              matrix_assignment = matrix_assignment.toarray()
+
             #####IN: Test allowed assignment for all peaks #######
             try:
               flag_stop=0
@@ -658,10 +717,12 @@ def build_assignment_peak(index):
             
             testing=matrix_assignment*matrix_noe
             tot=testing.sum()
-            
+
             #####Geminal scaling factor
             if (flag_geminal==1 and matrix_noe_geminal.sum()>0):
-              matrix_assignment_geminal=new_metrics[1][np.ix_(index_matrix_methyls, index_matrix_methyls)]
+              matrix_assignment_geminal = sparse_submatrix(new_metrics[1], index_matrix_methyls, index_matrix_methyls)
+              if sparse.issparse(matrix_assignment_geminal):
+                matrix_assignment_geminal = matrix_assignment_geminal.toarray()
               testing_geminal=matrix_noe_geminal*matrix_assignment_geminal
               tot=round(tot*(1+0.2*(testing_geminal.sum()/float(matrix_noe_geminal.sum()))),3)
             #####Geminal scaling factor
@@ -758,9 +819,16 @@ def outputing(highest_score,peak_matrix_Scoring):
     factors=(1,1,0.25)
     sym_coef=0.1
     peak_matrix_Scoring2,peak_matrix_clustering2,glup,glop,glip,glep,glyp,glap=noe2matrix(result,factors,3)
-    matrix_peaks_CS=peak_matrix_clustering2[peaks,:][:,peaks] ###peak_matrix_clustering2 instead of peak_matrix_clustering if factor is changed
-    matrix_peaks_Cluster=peak_matrix_clustering[peaks,:][:,peaks]
-    matrix_peaks=peak_matrix_Scoring2[peaks,:][:,peaks]
+    # OPTIMIZED: Use sparse_submatrix for efficient indexing
+    matrix_peaks_CS = sparse_submatrix(peak_matrix_clustering2, peaks, peaks)  ###peak_matrix_clustering2 instead of peak_matrix_clustering if factor is changed
+    if sparse.issparse(matrix_peaks_CS):
+      matrix_peaks_CS = matrix_peaks_CS.toarray()
+    matrix_peaks_Cluster = sparse_submatrix(peak_matrix_clustering, peaks, peaks)
+    if sparse.issparse(matrix_peaks_Cluster):
+      matrix_peaks_Cluster = matrix_peaks_Cluster.toarray()
+    matrix_peaks = sparse_submatrix(peak_matrix_Scoring2, peaks, peaks)
+    if sparse.issparse(matrix_peaks):
+      matrix_peaks = matrix_peaks.toarray()
     matrix_score=matrix_assignment*matrix_peaks
     correct=0
     total=0
@@ -1059,10 +1127,18 @@ peak_matrix_Scoring,peak_matrix_clustering,HMQC_peak_list,overlap_topo,RiskyPeak
 scaler=len(HMQC_peak_list)//100
 #print 'median',np.median(peak_matrix_Scoring.sum(axis=0))
 #print 'mean',np.mean(peak_matrix_Scoring.sum(axis=0))
-FILTER_start=np.mean(peak_matrix_Scoring.sum(axis=0))#*len(HMQC_peak_list)
+# OPTIMIZED: Handle sparse matrix sum operation
+if sparse.issparse(peak_matrix_Scoring):
+  FILTER_start = np.mean(np.array(peak_matrix_Scoring.sum(axis=0)).flatten())  #*len(HMQC_peak_list)
+else:
+  FILTER_start = np.mean(peak_matrix_Scoring.sum(axis=0))  #*len(HMQC_peak_list)
 
 file_log.write('Mean maximal peak score and scaler: '+str(round(FILTER_start,3))+'; '+str(scaler)+'\n')
-calcul=peak_matrix_clustering[np.where(peak_matrix_clustering>0)]
+# OPTIMIZED: Extract non-zero values from sparse matrix
+if sparse.issparse(peak_matrix_clustering):
+  calcul = peak_matrix_clustering.data[peak_matrix_clustering.data > 0]
+else:
+  calcul = peak_matrix_clustering[np.where(peak_matrix_clustering>0)]
 main_confident=np.mean(calcul)
 file_log.write('Average peak connection confidence score: '+str(round(main_confident,3))+'\n')
 
@@ -1162,9 +1238,10 @@ for i in assignment_locked_peak:
 #############Analysis of network density matrix###########################################
 N=peak_matrix_clustering.shape[0]
 #matrix2=peak_matrix_clustering
-matrix2=np.dot(peak_matrix_clustering,peak_matrix_clustering)
-np.fill_diagonal(matrix2, 0)  # OPTIMIZED: Use NumPy built-in
-P_high=round(np.amax(matrix2),0)
+# OPTIMIZED: Use sparse matrix multiplication (much faster for sparse data)
+matrix2 = peak_matrix_clustering.dot(peak_matrix_clustering)
+matrix2.setdiag(0)  # OPTIMIZED: Sparse equivalent of np.fill_diagonal
+P_high=round(matrix2.max(), 0)  # OPTIMIZED: Use .max() for sparse matrices
 
 
 ##########################################################################################
@@ -1177,9 +1254,12 @@ P=P_high
 selected_peaks_clusters=obj()
 N = peak_matrix_clustering.shape[0]
 #matrix2=peak_matrix_clustering
-matrix2=np.dot(peak_matrix_clustering,peak_matrix_clustering)
+# OPTIMIZED: Reuse matrix2 from above (sparse matrix multiplication)
+matrix2 = peak_matrix_clustering.dot(peak_matrix_clustering)
 for i in range(N):
-      neighbors_with_sharing=np.argwhere(matrix2[i,:]>P) # 2 => 1 shared neighbors, 3=>2, etc.
+      # OPTIMIZED: Extract sparse row and find non-zero elements
+      row = matrix2.getrow(i).toarray().flatten()
+      neighbors_with_sharing = np.argwhere(row > P)  # 2 => 1 shared neighbors, 3=>2, etc.
       if not i in neighbors_with_sharing:
         neighbors_with_sharing=[neighbors_with_sharing[j,0] for j in range(neighbors_with_sharing.size)]
         neighbors_with_sharing.append(i)
@@ -1256,10 +1336,15 @@ for name_peak in list_peak:
           locked_methyl=locked_methyl+[assignment_locked_methyl[i]]
       if total_Assignments==[]:total_Assignments=[[],[]]
       index_matrix_noe=locked_noe+total_Assignments[0]
-      matrix_noe=peak_matrix_Scoring[np.ix_(index_matrix_noe, index_matrix_noe)]
+      # OPTIMIZED: Extract submatrix from sparse matrix
+      matrix_noe = sparse_submatrix(peak_matrix_Scoring, index_matrix_noe, index_matrix_noe)
+      if sparse.issparse(matrix_noe):
+        matrix_noe = matrix_noe.toarray()
       for assignment in total_Assignments[1:]:
         index_matrix_methyls=locked_methyl+assignment
-        matrix_assignment=new_metrics[0][np.ix_(index_matrix_methyls, index_matrix_methyls)]
+        matrix_assignment = sparse_submatrix(new_metrics[0], index_matrix_methyls, index_matrix_methyls)
+        if sparse.issparse(matrix_assignment):
+          matrix_assignment = matrix_assignment.toarray()
         testing=matrix_assignment*matrix_noe
         tot=testing.sum()
         tot_res=testing.sum(axis=0)
@@ -1389,9 +1474,13 @@ for P in P_list:
         if flag_new_peaks==1:pass
         elif set_of_peaks.size>=cluster_size:flag_new_peaks=1
         else:flag_new_peaks=0
-        
-        sorting=[(peak_matrix_clustering[peak,int(list_peak[name_peak_index])],peak) for peak in new_peaks]
-        sorting.sort()        
+
+        # OPTIMIZED: Handle sparse matrix element access
+        if sparse.issparse(peak_matrix_clustering):
+          sorting = [(peak_matrix_clustering[peak, int(list_peak[name_peak_index])], peak) for peak in new_peaks]
+        else:
+          sorting = [(peak_matrix_clustering[peak, int(list_peak[name_peak_index])], peak) for peak in new_peaks]
+        sorting.sort()
         sorting=sorting[::-1]
         
         for line in sorting:
@@ -1680,21 +1769,34 @@ for P in P_list:
                 continue            
             else:pass
 
-            sum_local=peak_matrix_Scoring[involved_peak,:][:,List_of_assigned_peaks].sum()
-            sum_global=peak_matrix_Scoring[List_of_assigned_peaks,:][:,involved_peak].sum()
+            # OPTIMIZED: Efficient sparse matrix slicing for score calculations
+            sum_local = sparse_submatrix(peak_matrix_Scoring, involved_peak, List_of_assigned_peaks)
+            sum_local = sum_local.sum() if sparse.issparse(sum_local) else sum_local.sum()
+
+            sum_global = sparse_submatrix(peak_matrix_Scoring, List_of_assigned_peaks, involved_peak)
+            sum_global = sum_global.sum() if sparse.issparse(sum_global) else sum_global.sum()
+
             ratio=round(float((len(List_of_assigned_peaks)+len(involved_peak)+len(assignment_locked_peak))/float(len(list_peak))),2)
-            
-            mean_score=np.mean(peak_matrix_Scoring[List_of_assigned_peaks+involved_peak,:][:,List_of_assigned_peaks+involved_peak].sum(axis=0))           
+
+            # OPTIMIZED: Calculate mean score efficiently with sparse matrices
+            combined_indices = List_of_assigned_peaks + involved_peak
+            score_submatrix = sparse_submatrix(peak_matrix_Scoring, combined_indices, combined_indices)
+            if sparse.issparse(score_submatrix):
+              mean_score = np.mean(score_submatrix.sum(axis=0).A1)  # .A1 converts to 1D array
+            else:
+              mean_score = np.mean(score_submatrix.sum(axis=0))           
             #FILTER=round(FILTER_scale*(0.03-0.02*ratio)*highest_score,3)
             #FILTER=round(FILTER_scale*len(involved_peak+List_of_assigned_peaks)*((1.05*(1-ratio))**2)*mean_score,3)           
             #FILTER=round(scaler*FILTER_scale*(FILTER_start*(1-ratio)+0.25*FILTER_start),3)
             FILTER=round(((scaler-1)*ratio+1)*FILTER_scale*(FILTER_start*(1-ratio)+0.25*FILTER_start),3)
             
-            keep2test=[] 
+            keep2test = []
             for peak in list_peak:
               if not int(peak) in involved_peak:keep2test.append(int(peak))
               else:pass
-            sum_out=peak_matrix_Scoring[involved_peak,:][:,keep2test].sum()
+            # OPTIMIZED: Efficient sparse matrix slicing for sum_out calculation
+            sum_out_submatrix = sparse_submatrix(peak_matrix_Scoring, involved_peak, keep2test)
+            sum_out = sum_out_submatrix.sum() if sparse.issparse(sum_out_submatrix) else sum_out_submatrix.sum()
             
             file_test=open('./'+str(Time_start).split('.')[0]+'/test', 'a')
             file_test.write('P: '+str(P)+(7-len(str(P)))*' '+
@@ -1878,7 +1980,9 @@ while cycler==0:
     sort_index=np.zeros((2,len(still_not_assigned)))
     for i in range(len(still_not_assigned)):
         sort_index[0,i]=still_not_assigned[i]
-        sort_index[1,i]=peak_matrix_clustering[still_not_assigned[i],List_of_assigned_peaks].sum()
+        # OPTIMIZED: Efficiently sum sparse matrix row slice
+        row_slice = sparse_submatrix(peak_matrix_clustering, [still_not_assigned[i]], List_of_assigned_peaks)
+        sort_index[1,i] = row_slice.sum() if sparse.issparse(row_slice) else row_slice.sum()
     score_sorting=sort_index[1,:]
     sort=np.argsort(score_sorting, axis=None)
     sort=sort[::-1]
@@ -1937,16 +2041,32 @@ while cycler==0:
       report_follow.write('assignment table length: '+str(len(possible_peak_assignments))+'\n'+str(possible_peak_assignments)+'\n')
       report_follow.close() 
 
-      if peak_matrix_Scoring[involved_peak[0],:].sum()==0:
+      # OPTIMIZED: Handle sparse matrix row sum
+      row_sum = sparse_submatrix(peak_matrix_Scoring, [involved_peak[0]], list(range(peak_matrix_Scoring.shape[1])))
+      if sparse.issparse(row_sum):
+        row_sum_val = row_sum.sum()
+      else:
+        row_sum_val = row_sum.sum()
+      if row_sum_val == 0:
           file_log.write('no crosspeaks'+'\n')
           no_crosspeaks_peak.append([cluster_name,possible_peak_assignments])
           continue         
 
-      sum_local=peak_matrix_Scoring[involved_peak,:][:,List_of_assigned_peaks].sum()
-      sum_global=peak_matrix_Scoring[List_of_assigned_peaks,:][:,involved_peak].sum()
+      # OPTIMIZED: Efficient sparse matrix slicing for score calculations
+      sum_local_sub = sparse_submatrix(peak_matrix_Scoring, involved_peak, List_of_assigned_peaks)
+      sum_local = sum_local_sub.sum() if sparse.issparse(sum_local_sub) else sum_local_sub.sum()
+
+      sum_global_sub = sparse_submatrix(peak_matrix_Scoring, List_of_assigned_peaks, involved_peak)
+      sum_global = sum_global_sub.sum() if sparse.issparse(sum_global_sub) else sum_global_sub.sum()
+
       ratio=round((len(List_of_assigned_peaks)+len(assignment_locked_peak)+1)/float(len(list_peak)),2)
 
-      mean_score=np.mean(peak_matrix_Scoring[List_of_assigned_peaks,:][:,List_of_assigned_peaks].sum(axis=0))           
+      # OPTIMIZED: Calculate mean score efficiently with sparse matrices
+      score_sub = sparse_submatrix(peak_matrix_Scoring, List_of_assigned_peaks, List_of_assigned_peaks)
+      if sparse.issparse(score_sub):
+        mean_score = np.mean(score_sub.sum(axis=0).A1)  # .A1 converts to 1D array
+      else:
+        mean_score = np.mean(score_sub.sum(axis=0))           
       #FILTER=round(FILTER_scale*len(involved_peak+List_of_assigned_peaks)*((1.05*(1-ratio))**2)*mean_score,3)
       
       #FILTER=round(FILTER_scale*(0.05-0.04*ratio)*highest_score,3)
@@ -1954,11 +2074,13 @@ while cycler==0:
                  
       #FILTER=round(scaler*FILTER_scale*(FILTER_start*(1-ratio)+0.25*FILTER_start),3)
 
-      keep2test=[] 
+      keep2test = []
       for peak in list_peak:
         if not int(peak) in involved_peak:keep2test.append(int(peak))
         else:pass
-      sum_out=peak_matrix_Scoring[involved_peak,:][:,keep2test].sum()
+      # OPTIMIZED: Efficient sparse matrix slicing for sum_out calculation
+      sum_out_sub = sparse_submatrix(peak_matrix_Scoring, involved_peak, keep2test)
+      sum_out = sum_out_sub.sum() if sparse.issparse(sum_out_sub) else sum_out_sub.sum()
       
       file_test=open('./'+str(Time_start).split('.')[0]+'/test', 'a')
       file_test.write('P: '+str(P)+(7-len(str(P)))*' '+
