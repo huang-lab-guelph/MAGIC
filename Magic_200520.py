@@ -6,7 +6,7 @@ import datetime as time
 import sys
 import os
 import multiprocessing as mp
-import cPickle
+import pickle
 import shutil
 import resource
 import psutil
@@ -307,7 +307,7 @@ def noe2matrix(result,factors,flag_cchlist):
            if total_height_i>0:rimax=float(imax/total_height_i)
            height_i2mean=round(float(total_height_i)/DistNOE[0], 2)
        except AttributeError: pass
-       if not str(linei_split[0]) in biblio_crosspeaks.keys():biblio_crosspeaks[str(linei_split[0])]={}     
+       if not str(linei_split[0]) in list(biblio_crosspeaks.keys()):biblio_crosspeaks[str(linei_split[0])]={}     
        if noe_peaki_list:
          counter=0     
          for noe_peaki in noe_peaki_list:
@@ -472,7 +472,7 @@ def build_assignment(index):
                 file_log.close()            
                 file_name=list_of_files[iii]
                 file=open('./'+directory.split('.')[0]+'/run/temp/'+str(file_name), 'r')
-                assignment_archive_FINAL=cPickle.load(file)
+                assignment_archive_FINAL=pickle.load(file)
                 file.close()         
                 if len(assignment_archive)==0:
                   index_peaks=assignment_archive_FINAL[0]+involved_peak
@@ -527,13 +527,13 @@ def build_assignment(index):
                         for j in range(len(assignment_archive[i+1][0])):
                           peak=HMQC_peak_list[int(assignment_archive[0][j])]
                           methyl=metrics[2][int(assignment_archive[i+1][0][j])]
-                          if not peak in assignment_collection.keys():
+                          if not peak in list(assignment_collection.keys()):
                             assignment_collection[peak]={}
                             assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                           else:
-                            if not methyl in assignment_collection[peak].keys():
+                            if not methyl in list(assignment_collection[peak].keys()):
                               assignment_collection[peak][methyl]=assignment_archive[i+1][1]
-                            elif (methyl in assignment_collection[peak].keys() and 
+                            elif (methyl in list(assignment_collection[peak].keys()) and 
                               assignment_archive[i+1][1]>assignment_collection[peak][methyl]):
                               assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                       else:deleted=deleted+1
@@ -547,13 +547,13 @@ def build_assignment(index):
                     for i in range(number_of_file):
                         assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[i*file_size+1:(i+1)*file_size+1]
                         file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                        cPickle.dump(assignment_archive_to_save,file,-1)
+                        pickle.dump(assignment_archive_to_save,file,-1)
                         file.close()
                         index_files+=1
                     if number_of_file_rest!=0:
                         assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[number_of_file*file_size+1:]
                         file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                        cPickle.dump(assignment_archive_to_save,file,-1)
+                        pickle.dump(assignment_archive_to_save,file,-1)
                         file.close()
                         index_files+=1
                     assignment_archive=[assignment_archive[0]] 
@@ -569,13 +569,13 @@ def build_assignment(index):
                       for j in range(len(assignment_archive[i+1][0])):
                         peak=HMQC_peak_list[int(assignment_archive[0][j])]
                         methyl=metrics[2][int(assignment_archive[i+1][0][j])]
-                        if not peak in assignment_collection.keys():
+                        if not peak in list(assignment_collection.keys()):
                           assignment_collection[peak]={}
                           assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                         else:
-                          if not methyl in assignment_collection[peak].keys():
+                          if not methyl in list(assignment_collection[peak].keys()):
                             assignment_collection[peak][methyl]=assignment_archive[i+1][1]
-                          elif (methyl in assignment_collection[peak].keys() and 
+                          elif (methyl in list(assignment_collection[peak].keys()) and 
                             assignment_archive[i+1][1]>assignment_collection[peak][methyl]):
                             assignment_collection[peak][methyl]=assignment_archive[i+1][1]
                     else:deleted=deleted+1
@@ -590,19 +590,19 @@ def build_assignment(index):
                     for i in range(number_of_file):
                       assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[i*file_size+1:(i+1)*file_size+1]
                       file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                      cPickle.dump(assignment_archive_to_save,file,-1)
+                      pickle.dump(assignment_archive_to_save,file,-1)
                       file.close()
                       index_files+=1
                     if number_of_file_rest!=0:
                       assignment_archive_to_save=[assignment_archive[0]]+assignment_archive[number_of_file*file_size+1:]
                       file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                      cPickle.dump(assignment_archive_to_save,file,-1)
+                      pickle.dump(assignment_archive_to_save,file,-1)
                       file.close()
                       index_files+=1
                     assignment_archive=[]
                   else:
                     file=open('./'+directory.split('.')[0]+'/run/temp/'+str(cluster_name)+'#'+str(index[0])+'#'+str(index_files), 'w')
-                    cPickle.dump(assignment_archive,file,-1)
+                    pickle.dump(assignment_archive,file,-1)
                     file.close()                    
                     assignment_archive=[]
               max=highest_score_inloop
@@ -646,9 +646,9 @@ def build_assignment_peak(index):
                 for i in range(len(index_matrix_noe)):
                   peak=HMQC_peak_list[int(index_matrix_noe[i])]
                   methyl=metrics[2][int(index_matrix_methyls[i])]
-                  if (peak in archive_assignment_result.keys() and
+                  if (peak in list(archive_assignment_result.keys()) and
                      len(overlap_topo[int(index_matrix_noe[i])])==0):
-                    if not methyl in archive_assignment_result[peak].keys():
+                    if not methyl in list(archive_assignment_result[peak].keys()):
                       flag_stop=1
                       break
                     else:pass
@@ -723,13 +723,13 @@ def outputing(highest_score,peak_matrix_Scoring):
 ############## TO IMPROVE ###############
     peaks=[]
     methyls=[]
-    list_peak=archive_assignment_result.keys()
+    list_peak=list(archive_assignment_result.keys())
     list_peak.sort()   
     for peak_name in list_peak:
       peaks.append(HMQC_peak_list.index(peak_name))      
       score=[]
-      for i in range(len(archive_assignment_result[peak_name].keys())):
-        methyl_name=archive_assignment_result[peak_name].keys()[i]
+      for i in range(len(list(archive_assignment_result[peak_name].keys()))):
+        methyl_name=list(archive_assignment_result[peak_name].keys())[i]
         score.append((archive_assignment_result[peak_name][methyl_name],methyl_name))
       score.sort()
       score=score[::-1]
@@ -753,7 +753,7 @@ def outputing(highest_score,peak_matrix_Scoring):
              select_methyl=score[i][1]
              break
         if select_methyl=='':
-          print 'error',peak_name
+          print('error',peak_name)
           methyls.append(metrics[2].index(score[0][1]))
         else:methyls.append(metrics[2].index(select_methyl))
 ############## TO IMPROVE ###############    
@@ -804,7 +804,7 @@ def outputing(highest_score,peak_matrix_Scoring):
           hmqc_new_list.append(methyl)
           hmqc_result_list.write(Name+'\t'+str(wC)+'\t'+str(wH))
           already_assigned=[]
-          completeness=np.zeros((1,len(biblio_crosspeaks[peak].keys())))
+          completeness=np.zeros((1,len(list(biblio_crosspeaks[peak].keys()))))
           for j in range(matrix_score[i,:].size):
                 if matrix_score[i,j]>0:
                   peakNOE=HMQC_peak_list[int(peaks[j])]
@@ -815,10 +815,10 @@ def outputing(highest_score,peak_matrix_Scoring):
                   cch_result_list.write(str(methylNOE)+'-'+Name+'\t'+str(wCnoe)+'\t'+str(wC)+'\t'+str(wH))
                   cch_result_list.write('  '+str(round(matrix_peaks_CS[i,j],3))+'  d='+str(matrix_methyls[i,j])
                                         +'  '+str(a)+'\n')               
-                  for NOE_index in biblio_crosspeaks[peak].keys():
+                  for NOE_index in list(biblio_crosspeaks[peak].keys()):
                     for donor in biblio_crosspeaks[peak][NOE_index][0]:
                       if (donor==peakNOE and not k in already_assigned):already_assigned.append(k)                    
-                  for NOE_index in biblio_crosspeaks[peak].keys():
+                  for NOE_index in list(biblio_crosspeaks[peak].keys()):
                     if (peakNOE in biblio_crosspeaks[peak][NOE_index][0] and
                         completeness[0,int(NOE_index)]==0):
                       completeness[0,int(NOE_index)]=1
@@ -1180,7 +1180,7 @@ file_log.write('\n\nCalculation starts:\n\n')
   
 if (a>A or il>I or l/2>L or v/2>V or t>T or m>M):
   file_log.write('More peaks than methyls, please review the hmqc list'+'\n')
-  print 'More peaks than methyls, please review the hmqc list'
+  print('More peaks than methyls, please review the hmqc list')
   sys.exit()
 else:pass
 file_log.close()
@@ -1335,13 +1335,13 @@ for name_peak in list_peak:
           for j in range(len(assignment_archive[i][0])):
             peak=HMQC_peak_list[assignment_archive[i][0][j]]
             methyl=metrics[2][assignment_archive[i][1][j]]
-            if not peak in archive_assignment_cluster.keys():
+            if not peak in list(archive_assignment_cluster.keys()):
               archive_assignment_cluster[peak]={}
               archive_assignment_cluster[peak][methyl]=assignment_archive[i][2]
             else:
-              if not methyl in archive_assignment_cluster[peak].keys():
+              if not methyl in list(archive_assignment_cluster[peak].keys()):
                 archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
-              elif (methyl in archive_assignment_cluster[peak].keys() and
+              elif (methyl in list(archive_assignment_cluster[peak].keys()) and
                     archive_assignment_cluster[peak][methyl]<assignment_archive[i][2]):
                 archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
               else:pass   
@@ -1365,7 +1365,7 @@ for name_peak in list_peak:
         report.write('\n')
       report.close()
       file=open('./'+directory+'/run/Local/archive/archive_'+str(name_peak), 'w')
-      cPickle.dump(assignment_archive,file,-1)
+      pickle.dump(assignment_archive,file,-1)
       file.close()
       assignment_archive=[]      
 ######################## iterative RUNs ####################
@@ -1397,7 +1397,7 @@ flag_score_equation=0
 archive_assignment_result={}
 completeness=np.zeros((len(HMQC_peak_list),2))
 
-for i in range(len(HMQC_peak_list)):completeness[i,1]=len(biblio_crosspeaks[HMQC_peak_list[i]].keys())
+for i in range(len(HMQC_peak_list)):completeness[i,1]=len(list(biblio_crosspeaks[HMQC_peak_list[i]].keys()))
 
 
 for P in P_list:
@@ -1442,7 +1442,7 @@ for P in P_list:
         #######OUT: Skip peak assignment if overlapping already assigned peak ########       
         set_of_peaks=getattr(selected_peaks_clusters, str(peak_index))
         file=open('./'+directory+'/run/Local/archive/archive_'+str(peak_index), 'r')
-        assignment_archive_old=cPickle.load(file)
+        assignment_archive_old=pickle.load(file)
         file.close()
         
         if len(assignment_archive_old)==0:continue
@@ -1481,7 +1481,7 @@ for P in P_list:
           else:flag_fin=1
           peak=line[1]
           file=open('./'+directory+'/run/Local/archive/archive_'+str(peak_index), 'r')
-          assignment_archive_old=cPickle.load(file)
+          assignment_archive_old=pickle.load(file)
           file.close()
           All_possible_assignment=[]  
           possible_assignment=[]
@@ -1531,7 +1531,7 @@ for P in P_list:
               pool_result=[]
               if len(assignments_table)!=0:
                 file=open('./'+directory+'/run/Local/temp/temp_'+str(number_of_files), 'w')
-                cPickle.dump(assignments_table,file,-1)
+                pickle.dump(assignments_table,file,-1)
                 file.close()
                 assignments_table=[]
                 number_of_files+=1 
@@ -1549,7 +1549,7 @@ for P in P_list:
 
               if len(assignments_table)!=0:
                 file=open('./'+directory+'/run/Local/temp/temp_'+str(number_of_files), 'w')
-                cPickle.dump(assignments_table,file,-1)
+                pickle.dump(assignments_table,file,-1)
                 file.close()
                 assignments_table=[]
                 number_of_files+=1
@@ -1575,7 +1575,7 @@ for P in P_list:
           list_of_files=os.listdir('./'+directory+'/run/Local/temp/')
           for i in range(len(list_of_files)):
               file=open('./'+directory+'/run/Local/temp/'+str(list_of_files[i]), 'r')
-              element=cPickle.load(file)
+              element=pickle.load(file)
               file.close()
               for j in range(len(element)):
                 for k in range(len(element[j])):
@@ -1589,13 +1589,13 @@ for P in P_list:
             for j in range(len(assignment_archive[i][0])):
               peak=HMQC_peak_list[assignment_archive[i][0][j]]
               methyl=metrics[2][assignment_archive[i][1][j]]
-              if not peak in archive_assignment_cluster.keys():
+              if not peak in list(archive_assignment_cluster.keys()):
                 archive_assignment_cluster[peak]={}
                 archive_assignment_cluster[peak][methyl]=assignment_archive[i][2]
               else:
-                if not methyl in archive_assignment_cluster[peak].keys():
+                if not methyl in list(archive_assignment_cluster[peak].keys()):
                   archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
-                elif (methyl in archive_assignment_cluster[peak].keys() and
+                elif (methyl in list(archive_assignment_cluster[peak].keys()) and
                       archive_assignment_cluster[peak][methyl]<assignment_archive[i][2]):
                   archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
                 else:pass
@@ -1621,7 +1621,7 @@ for P in P_list:
             report.write('\n')
           report.close()
           file=open('./'+directory+'/run/Local/archive/archive_'+str(peak_index), 'w')
-          cPickle.dump(assignment_archive,file,-1)
+          pickle.dump(assignment_archive,file,-1)
           file.close()
           assignment_archive=[] 
 #####################################################################################################      
@@ -1642,7 +1642,7 @@ for P in P_list:
         os.makedirs('./'+directory+'/run/temp')
         assignment_archive_FINAL=[assignment_locked_peak,[assignment_locked_methyl,]]
         file=open('./'+directory+'/run/temp/100000000#', 'w')
-        cPickle.dump(assignment_archive_FINAL,file,-1)
+        pickle.dump(assignment_archive_FINAL,file,-1)
         file.close()
         highest_score=0
         flag_alone=0
@@ -1654,7 +1654,7 @@ for P in P_list:
       sort_index=np.zeros((2,len(list_peak)))          
       for i in range(len(list_peak)):
             file=open('./'+directory+'/run/Local/archive/archive_'+str(i), 'r')
-            assignment_archive_clusterX=cPickle.load(file)
+            assignment_archive_clusterX=pickle.load(file)
             file.close()
             sort_index[0,i]=list_peak[i]
             sort_index[1,i]=len(assignment_archive_clusterX)
@@ -1666,7 +1666,7 @@ for P in P_list:
             cluster_name=int(sort_index[0,cluster_index])
             set_of_peaks=getattr(selected_peaks_clusters, str(cluster_name))
             possible_peak_assignments=getattr(result, str(cluster_name)+'_possible_peak_assignments')
-            number_of_peaks=len(possible_peak_assignments.keys())
+            number_of_peaks=len(list(possible_peak_assignments.keys()))
  
             ####Define cluster size       
             counter=np.argwhere(matrix2[cluster_name,:]>=3)
@@ -1691,12 +1691,12 @@ for P in P_list:
             #######OUT: Skip peak assignment if overlapping already assigned peak ########
             
             file=open('./'+directory+'/run/Local/archive/archive_'+str(cluster_name), 'r')
-            assignment_archive_clusterX=cPickle.load(file)
+            assignment_archive_clusterX=pickle.load(file)
             file.close()
 
             list_of_files=os.listdir('./'+directory+'/run/temp/')
             file=open('./'+directory+'/run/temp/'+str(list_of_files[0]), 'r')
-            assignment_previous=cPickle.load(file)
+            assignment_previous=pickle.load(file)
             file.close()
             
             try:involved_peak=assignment_archive_clusterX[0][0]
@@ -1725,9 +1725,9 @@ for P in P_list:
                   for i in range(len(line[1])):
                     peak=HMQC_peak_list[int(assignment_archive_clusterX[0][0][i])]
                     methyl=metrics[2][int(line[1][i])]
-                    if (peak in archive_assignment_result.keys() and
+                    if (peak in list(archive_assignment_result.keys()) and
                        len(overlap_topo[int(assignment_archive_clusterX[0][0][i])])==0):
-                      if not methyl in archive_assignment_result[peak].keys():
+                      if not methyl in list(archive_assignment_result[peak].keys()):
                         flag_stop=1
                         break
                       else:pass
@@ -1741,21 +1741,21 @@ for P in P_list:
               flag_skip_line=0
               for i in line_to_add:
                 methyl=metrics[2][int(i)]
-                for peak in archive_assignment_result.keys():
-                  if methyl in archive_assignment_result[peak].keys():
-                    if (len(archive_assignment_result[peak].keys())==1 and flag_geminal==2):
+                for peak in list(archive_assignment_result.keys()):
+                  if methyl in list(archive_assignment_result[peak].keys()):
+                    if (len(list(archive_assignment_result[peak].keys()))==1 and flag_geminal==2):
                       flag_skip_line=1
                       break
-                    if (len(archive_assignment_result[peak].keys())==1 and methyl[0]!='L' and methyl[0]!='V'):
+                    if (len(list(archive_assignment_result[peak].keys()))==1 and methyl[0]!='L' and methyl[0]!='V'):
                       flag_skip_line=1
                       break
                     else:
-                      excluding_assignment=archive_assignment_result[peak].keys()
+                      excluding_assignment=list(archive_assignment_result[peak].keys())
                       count=0
                       for methyl_ex in excluding_assignment:
                         if (methyl_ex[0]=='L' or methyl_ex[0]=='V'):count+=-1     
-                      for peak2 in archive_assignment_result.keys():
-                        if excluding_assignment==archive_assignment_result[peak2].keys():count+=1
+                      for peak2 in list(archive_assignment_result.keys()):
+                        if excluding_assignment==list(archive_assignment_result[peak2].keys()):count+=1
                         else:pass
                         if count==len(excluding_assignment):
                           flag_skip_line=1
@@ -1770,7 +1770,7 @@ for P in P_list:
 
             #EDIT
             file=open('./'+directory+'/run/Local/archive/archive_'+str(cluster_name), 'w')
-            cPickle.dump(list2stock,file,-1)
+            pickle.dump(list2stock,file,-1)
             file.close()
             #EDIT          
                           
@@ -1867,12 +1867,12 @@ for P in P_list:
               if  pool_result[j][1]>highest_score:highest_score=pool_result[j][1]                 
             for element in pool_result:
               archive=element[0]
-              for peak in archive.keys():
-                if not peak in archive_assignment_result.keys():archive_assignment_result[peak]={}
-                for methyl in archive[peak].keys():
-                  if not methyl in archive_assignment_result[peak].keys():
+              for peak in list(archive.keys()):
+                if not peak in list(archive_assignment_result.keys()):archive_assignment_result[peak]={}
+                for methyl in list(archive[peak].keys()):
+                  if not methyl in list(archive_assignment_result[peak].keys()):
                     archive_assignment_result[peak][methyl]=archive[peak][methyl]
-                  if (methyl in archive_assignment_result[peak].keys() and
+                  if (methyl in list(archive_assignment_result[peak].keys()) and
                       archive[peak][methyl]>archive_assignment_result[peak][methyl]):
                     archive_assignment_result[peak][methyl]=archive[peak][methyl]                              
             #####################OUT:Multi-processed assignment building##################       
@@ -1895,7 +1895,7 @@ for P in P_list:
             already_called_cluster.append(cluster_name)
             if cluster_name in delayed_clusters:delayed_clusters.remove(cluster_name) 
             report_follow=open('./'+directory+'/run/Global/logFile_'+str(round(P,2)), 'a')
-            for peak in archive_assignment_result.keys():
+            for peak in list(archive_assignment_result.keys()):
               for methyl in archive_assignment_result[peak]:
                 try:
                   if re.search('\w(\d+)\w',str(methyl)).group(1)==re.search('(\d+)\w', peak).group(1):
@@ -1909,8 +1909,8 @@ for P in P_list:
             if flag_not_null==1:
               outputing(highest_score,peak_matrix_Scoring)  
               Time_end=time.datetime.now()
-              list_of_peaks=archive_assignment_result.keys()    
-              print 'Tc= '+str(round(P,2))+'; '+str(Time_end-Time_start).split('.')[0].split('.')[0],' => ',str(round(100*len(list_of_peaks)/float(len(HMQC_peak_list)),1)),'%'                 
+              list_of_peaks=list(archive_assignment_result.keys())    
+              print('Tc= '+str(round(P,2))+'; '+str(Time_end-Time_start).split('.')[0].split('.')[0],' => ',str(round(100*len(list_of_peaks)/float(len(HMQC_peak_list)),1)),'%')                 
             setattr(result,'archive_assignment_result',archive_assignment_result)
 
 ##########################################################################################
@@ -1999,21 +1999,21 @@ else:
           #####IN: Test whether peak assignment is not already used #######
           flag_skip_line=0
           methyl=metrics[2][int(line[0])]
-          for peak in archive_assignment_result.keys():
-            if methyl in archive_assignment_result[peak].keys():
-              if (len(archive_assignment_result[peak].keys())==1 and flag_geminal==2):
+          for peak in list(archive_assignment_result.keys()):
+            if methyl in list(archive_assignment_result[peak].keys()):
+              if (len(list(archive_assignment_result[peak].keys()))==1 and flag_geminal==2):
                 flag_skip_line=1
                 break
-              if (len(archive_assignment_result[peak].keys())==1 and methyl[0]!='L' and methyl[0]!='V'):
+              if (len(list(archive_assignment_result[peak].keys()))==1 and methyl[0]!='L' and methyl[0]!='V'):
                 flag_skip_line=1
                 break
               else:
-                excluding_assignment=archive_assignment_result[peak].keys()
+                excluding_assignment=list(archive_assignment_result[peak].keys())
                 count=0
                 for methyl_ex in excluding_assignment:
                   if (methyl_ex[0]=='L' or methyl_ex[0]=='V'):count+=-1 
-                for peak2 in archive_assignment_result.keys():
-                  if excluding_assignment==archive_assignment_result[peak2].keys():count+=1
+                for peak2 in list(archive_assignment_result.keys()):
+                  if excluding_assignment==list(archive_assignment_result[peak2].keys()):count+=1
                   else:pass
                   if count==len(excluding_assignment):
                     flag_skip_line=1
@@ -2093,12 +2093,12 @@ else:
         if  pool_result[j][1]>highest_score:highest_score=pool_result[j][1]
       for element in pool_result:
         archive=element[0]
-        for peak in archive.keys():
-          if not peak in archive_assignment_result.keys():archive_assignment_result[peak]={}
-          for methyl in archive[peak].keys():
-            if not methyl in archive_assignment_result[peak].keys():
+        for peak in list(archive.keys()):
+          if not peak in list(archive_assignment_result.keys()):archive_assignment_result[peak]={}
+          for methyl in list(archive[peak].keys()):
+            if not methyl in list(archive_assignment_result[peak].keys()):
               archive_assignment_result[peak][methyl]=archive[peak][methyl]
-            if (methyl in archive_assignment_result[peak].keys()
+            if (methyl in list(archive_assignment_result[peak].keys())
               and archive[peak][methyl]>archive_assignment_result[peak][methyl]):
               archive_assignment_result[peak][methyl]=archive[peak][methyl]                
       ##################### Multi-processed assignment building #################### 
@@ -2117,13 +2117,13 @@ else:
       List_of_assigned_peaks.append(cluster_name) 
       still_not_assigned.remove(cluster_name)
       if flag_not_null==0:archive_assignment_result=archive_assignment_result_previous                     
-      list_of_peaks=archive_assignment_result.keys()
+      list_of_peaks=list(archive_assignment_result.keys())
       list_of_peaks.sort()
       Time_end=time.datetime.now()      
-      print 'Tc= '+str(P)+'; '+str(Time_end-Time_start).split('.')[0].split('.')[0], ' => ',str(round(100*len(list_of_peaks)/float(len(HMQC_peak_list)),1)),'%'
+      print('Tc= '+str(P)+'; '+str(Time_end-Time_start).split('.')[0].split('.')[0], ' => ',str(round(100*len(list_of_peaks)/float(len(HMQC_peak_list)),1)),'%')
       
       report_follow=open('./'+directory+'/'+path_name+'/'+logFile_name, 'a')
-      for peak in archive_assignment_result.keys():
+      for peak in list(archive_assignment_result.keys()):
           for methyl in archive_assignment_result[peak]:
             try:
               if re.search('\w(\d+)\w',str(methyl)).group(1)==re.search('(\d+)\w', peak).group(1):
@@ -2148,18 +2148,18 @@ histo_ambiguity={}
 for peakline in file.readlines()[2:]:
   if peakline.count('NotAss')==0:
     number_of_methyls=peakline.count(':')
-    if not str(number_of_methyls) in histo_ambiguity.keys():
+    if not str(number_of_methyls) in list(histo_ambiguity.keys()):
       histo_ambiguity[str(number_of_methyls)]=1
     else:histo_ambiguity[str(number_of_methyls)]+=1
   else:
     number_of_methyls=peakline.count(',')+1
-    if not str(number_of_methyls) in histo_ambiguity.keys():
+    if not str(number_of_methyls) in list(histo_ambiguity.keys()):
       histo_ambiguity[str(number_of_methyls)]=1
     else:histo_ambiguity[str(number_of_methyls)]+=1
 file.close()
 tot_ass=0
 tot_met=0
-sorted_histo_keys=[int(i) for i in histo_ambiguity.keys()]
+sorted_histo_keys=[int(i) for i in list(histo_ambiguity.keys())]
 sorted_histo_keys.sort()
 file_log=open('./'+directory+'/log', 'a')
 file_log.write('\n\n\nSome statistics...\n')
@@ -2174,4 +2174,4 @@ file_log.write('\nAssigned methyls: '+str(round(100*len(List_of_assigned_peaks)/
                '\nAverage alternative assignments: '+str(round(tot_ass/tot_met,1))+' per peak'
                '\nCalculation time: '+str(Time_end-Time_start).split('.')[0].split('.')[0])
 file_log.close
-print 'Assignment complete'
+print('Assignment complete')

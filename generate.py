@@ -6,16 +6,16 @@ import datetime as time
 import sys
 import os
 import multiprocessing as mp
-import cPickle
+import pickle
 import shutil
 import resource
 
 if str(sys.argv[1])=='-h':
-  print 'python generate.py [2D peak list file name]'
-  print '                   [construct sequence file name, fasta format]'
-  print '                   [labeling, e.g. AILMTV]'
-  print '                   [starting sequence number, e.g. 48]'
-  print '                   [short mixing time CCH peak list] if available'
+  print('python generate.py [2D peak list file name]')
+  print('                   [construct sequence file name, fasta format]')
+  print('                   [labeling, e.g. AILMTV]')
+  print('                   [starting sequence number, e.g. 48]')
+  print('                   [short mixing time CCH peak list] if available')
   exit()
 
 class obj:
@@ -39,7 +39,7 @@ try:
 except IndexError:pass
 
 SEQ=SEQ.replace('\n','')
-print SEQ
+print(SEQ)
 
 A,I,L,M,T,V=0,0,0,0,0,0
 seq_output=open('./seq.auto','w')
@@ -63,9 +63,9 @@ for i in range(len(SEQ)):
     seq_output.write('V'+str(seq_starter+i)+'\n')
     V+=1
 seq_output.close()
-print '###################################'
-print 'Number of methyls: '+str(A+I+2*L+M+T+2*V)
-print 'A: ',A,'\nI: ',I,'\nL: ',L,'\nM: ',M,'\nT: ',T,'\nV: ',V
+print('###################################')
+print('Number of methyls: '+str(A+I+2*L+M+T+2*V))
+print('A: ',A,'\nI: ',I,'\nL: ',L,'\nM: ',M,'\nT: ',T,'\nV: ',V)
 seq_output.close()
 
 sdAh=0.28
@@ -200,4 +200,4 @@ if flag_geminal==1:
     HMQC_newfile.write('\t'+peak_geminal+'\n')
   HMQC_newfile.close()
   CHH_geminal.close()
-print 'New HMQC peak list generated, please review it for accuracy.'
+print('New HMQC peak list generated, please review it for accuracy.')

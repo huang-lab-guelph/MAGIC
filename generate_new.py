@@ -6,17 +6,17 @@ import datetime as time
 import sys
 import os
 import multiprocessing as mp
-import cPickle
+import pickle
 import shutil
 import resource
 
 if str(sys.argv[1])=='-h':
-  print 'python generate.py [2D peak list file name]'
-  print '                   [construct sequence file name, fasta format]'
-  print '                   [labeling, e.g. nAILMTV]'
-  print '                   [starting sequence number, e.g. 48]'
-  print '                   [rename: y or n]'
-  print '                   [short mixing time CCH peak list] if available'
+  print('python generate.py [2D peak list file name]')
+  print('                   [construct sequence file name, fasta format]')
+  print('                   [labeling, e.g. nAILMTV]')
+  print('                   [starting sequence number, e.g. 48]')
+  print('                   [rename: y or n]')
+  print('                   [short mixing time CCH peak list] if available')
   exit()
 
 class obj:
@@ -68,9 +68,9 @@ for i in range(len(SEQ)):
     seq_output.write('V'+str(seq_starter+i)+'\n')
     V+=1
 seq_output.close()
-print '###################################'
-print 'Number of methyls: '+str(A+I+2*L+M+T+2*V)
-print 'A: ',A,'\nI: ',I,'\nL: ',L,'\nM: ',M,'\nT: ',T,'\nV: ',V
+print('###################################')
+print('Number of methyls: '+str(A+I+2*L+M+T+2*V))
+print('A: ',A,'\nI: ',I,'\nL: ',L,'\nM: ',M,'\nT: ',T,'\nV: ',V)
 seq_output.close()
 
 sdAh=0.28
@@ -157,7 +157,7 @@ for i in range(peak_type.shape[0]):
   spaces=len('  '+peak_name)
   HMQC_newfile.write('  '+peak_name+(14-spaces)*' '+HMQC[i].split()[1]+'   '+HMQC[i].split()[2]+'\t\t'+text+'\n')
 #HMQC_newfile.write('tot_0='+str(tot_0)+', tot_1='+str(tot_1)+', tot_2='+str(tot_2)+', tot_3='+str(tot_3))
-print 'Average number of methyl type per peak: ', round(tot_types/float(len(HMQC)),2)
+print('Average number of methyl type per peak: ', round(tot_types/float(len(HMQC)),2))
 HMQC_newfile.close()
 ############Automatic first guess for geminal pairing according to short mixing time CCH noesy#############
 if flag_geminal==1:
@@ -215,4 +215,4 @@ if flag_geminal==1:
     HMQC_newfile.write('\t'+peak_geminal+'\n')
   HMQC_newfile.close()
   CHH_geminal.close()
-print 'New HMQC peak list generated, please review it for accuracy.'
+print('New HMQC peak list generated, please review it for accuracy.')

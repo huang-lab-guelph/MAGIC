@@ -73,12 +73,12 @@ AA_dic = {"A":[71.079 , 1, 3, 1, 4,  5,  1, 3],"C":[103.139, 1, 0, 0, 4,  5,  1,
 ## read in the PDB file used it to generate the sequence. 
 
 if len(sys.argv)==1:
-	print '''
+	print('''
 Usage: 
 	MAGIC-Net [output name] [pdb] 
 
 	ex) MAGIC-Net FGFR3 4K33.pdb
-'''
+''')
 	exit()
 
 CurDir = os.getcwd()
@@ -126,10 +126,10 @@ LV_entries = []
 
 for line in open(pdb_name):
 	if line[0:4] == "ATOM" or line[0:4] == 'HETA':
-		if line[17:20].strip() in AAA_dict.keys():
+		if line[17:20].strip() in list(AAA_dict.keys()):
 			if line[12:16].strip() == 'CA':
 				SEQ.append(AAA_dict[line[17:20].strip()])
-			if AAA_dict[line[17:20].strip()] in Labeled.keys() and line[12:16].strip() in Labeled[AAA_dict[line[17:20].strip()]]:
+			if AAA_dict[line[17:20].strip()] in list(Labeled.keys()) and line[12:16].strip() in Labeled[AAA_dict[line[17:20].strip()]]:
 				methyl = AAA_dict[line[17:20].strip()] + line[22:26].strip() + '-' + line[12:16].strip()
 				All_PDB_entries[methyl] =[methyl,AAA_dict[line[17:20].strip()], line[12:16].strip(), float(line[30:38]), float(line[38:46]), float(line[46:54])]
 				PDB_entries.append(methyl)
@@ -175,7 +175,7 @@ for i in range(len(tmethyls)):
 	pmethyls.append((float(tmethyls[i])/metot)*100)
 
 for method in LV_Labeling:
-	print method
+	print(method)
 	pdf1 = PdfPages(outname + '_globalnetworks_' + method + '.pdf')
 	pdf2 = PdfPages(outname + '_subnetworsks_'+ method + '.pdf')
 	pdf3 = PdfPages(outname + '_local_networks_'+ method + '.pdf')
@@ -379,10 +379,10 @@ for method in LV_Labeling:
 			out_table.loc[labeling + '_Total' ,str(lowCut)+'A_Ambiguous'] = np.round(ALN/float(len(PDB_atoms))*100,1)
 			out_table.loc[labeling + '_Total' ,str(lowCut)+'A_Unambiguous'] = np.round(PDB_Summary.dropna(axis=0, subset=[labeling + '_ULN']).shape[0]/float(len(PDB_atoms))*100,1)
 			out_table.loc[labeling + '_Total' ,str(lowCut)+'A_All'] = np.round(PDB_Summary.dropna(axis=0, subset=[labeling + '_LN']).shape[0]/float(len(PDB_atoms))*100,1)
-			print labeling + ' ' + method
-			print 'Using Cutoff of %d' %lowCut
-			print '%d Local Networks' % float(	out_table.loc[labeling + '_Total' ,str(lowCut)+'A_LN'])
-			print '%2.1f of Local Networks are Fully Unique' %(len(Fully_unique)/float(cleanPDB.shape[0]))
+			print(labeling + ' ' + method)
+			print('Using Cutoff of %d' %lowCut)
+			print('%d Local Networks' % float(	out_table.loc[labeling + '_Total' ,str(lowCut)+'A_LN']))
+			print('%2.1f of Local Networks are Fully Unique' %(len(Fully_unique)/float(cleanPDB.shape[0])))
 			for lme in labeling:
 				temp = PDB_Summary[PDB_Summary['type'] == lme].copy(deep=True)
 				temp2 = temp.dropna(axis=0, subset=[labeling + '_ULN']).copy(deep=True)
@@ -403,11 +403,11 @@ for method in LV_Labeling:
 					out_table.loc[labeling + '_' + lme ,str(lowCut)+'A_Unambiguous'] = np.round(temp2.shape[0]/float(temp.shape[0])*100,1)
 					out_table.loc[labeling + '_' + lme ,str(lowCut)+'A_Ambiguous'] = np.round((temp3.shape[0]-temp2.shape[0])/float(temp.shape[0])*100,1)
 					out_table.loc[labeling + '_' + lme ,str(lowCut)+'A_All'] = np.round(temp3.shape[0]/float(temp.shape[0])*100,1)
-				print '%d %s' %(temp.shape[0],lme)
-				print '#%s in LN %d' %(lme,eval(lme+'count'))
-				print '#%s in unique LN %d' %(lme, eval('u'+ lme+'count'))
-				print '# NOEs to %s %d' %(lme, temp[labeling + '_NOE'].sum())
-				print 'Average NOEs per %s %.2f' %(lme, np.round(temp[labeling + '_NOE'].sum()/float(temp.shape[0]),2))
+				print('%d %s' %(temp.shape[0],lme))
+				print('#%s in LN %d' %(lme,eval(lme+'count')))
+				print('#%s in unique LN %d' %(lme, eval('u'+ lme+'count')))
+				print('# NOEs to %s %d' %(lme, temp[labeling + '_NOE'].sum()))
+				print('Average NOEs per %s %.2f' %(lme, np.round(temp[labeling + '_NOE'].sum()/float(temp.shape[0]),2)))
 				# if temp.shape[0] != 0: print '%.2f NOE per %s' %(np.round(temp[labeling + '_NOE'].mean(),2), lme)
 			
 			if lowCut == 6.0 and labeling == 'ILVMAT':
@@ -431,7 +431,7 @@ for method in LV_Labeling:
 									used.append(methyl)
 									used.append(methyl2)
 									PDB_Summary.loc[methyl2,labeling + '_Subnet_ID'] = i
-			print ''
+			print('')
 
 		##-------------------------------------------------------------------------
 		#Plot Global Network 
@@ -473,7 +473,7 @@ for method in LV_Labeling:
 			if lowCut == 6.0 and labeling == 'ILVMAT':
 				for subnet in 	PDB_Summary[labeling + '_Subnet_ID'].unique().tolist():
 					subnetwork = PDB_Summary[PDB_Summary[labeling + '_Subnet_ID'] == subnet].index.tolist()
-					print subnetwork
+					print(subnetwork)
 					if len(subnetwork) > 5:
 						fig2=plt.figure(figsize=(3.3,3))
 						ax = fig2.add_subplot(111)
@@ -724,4 +724,4 @@ pdf.close()
 
 end_time = datetime.now()
 runtime = end_time - start_time
-print'Duration: ' + str(runtime)
+print('Duration: ' + str(runtime))
