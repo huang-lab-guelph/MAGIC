@@ -27,6 +27,13 @@ source ../magic_env/bin/activate
 python ../Magic_v1.0.py start_stereo.txt
 ```
 
+## Run yme1l_201 Sample (Optimized)
+```bash
+cd yme1l_201
+source ../magic_env/bin/activate
+python ../Magic_v1_optimized.py start_yme1l_201.txt
+```
+
 ## Output
 Each run creates a timestamped folder (YYYY-MM-DD HH:MM:SS) containing:
 - `Input/` - Copy of input files

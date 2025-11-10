@@ -1,0 +1,17 @@
+MAGIC OPTIMIZATION TEST REPORT
+================================================================================
+Date: 2025-11-10 11:19:37
+Dataset: Abl-RD
+
+
+Magic_v1.0.py:
+  Status: partial
+  Time: 49.94 seconds
+
+Magic_v1_optimized.py:
+  Status: partial
+  Time: 31.11 seconds
+
+Magic_v1_fully_optimized.py:
+  Status: partial
+  Time: 49.13 seconds
