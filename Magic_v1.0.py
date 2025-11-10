@@ -1316,8 +1316,15 @@ N=peak_matrix_clustering.shape[0]
 #matrix2=peak_matrix_clustering
 # OPTIMIZED: Use sparse matrix multiplication (much faster for sparse data)
 matrix2 = peak_matrix_clustering.dot(peak_matrix_clustering)
-matrix2.setdiag(0)  # OPTIMIZED: Sparse equivalent of np.fill_diagonal
-P_high=round(matrix2.max(), 0)  # OPTIMIZED: Use .max() for sparse matrices
+# CRITICAL FIX: Convert to dense for small matrices to avoid repeated sparse->dense conversions
+# For small matrices (N < 200), the overhead of sparse operations outweighs benefits
+if N < 200:
+  matrix2 = matrix2.toarray()
+  np.fill_diagonal(matrix2, 0)
+  P_high = round(np.amax(matrix2), 0)
+else:
+  matrix2.setdiag(0)  # Keep sparse for large matrices
+  P_high = round(matrix2.max(), 0)
 
 
 ##########################################################################################
@@ -1330,11 +1337,13 @@ P=P_high
 selected_peaks_clusters=obj()
 N = peak_matrix_clustering.shape[0]
 #matrix2=peak_matrix_clustering
-# OPTIMIZED: Reuse matrix2 from above (sparse matrix multiplication)
-matrix2 = peak_matrix_clustering.dot(peak_matrix_clustering)
+# OPTIMIZED: Reuse matrix2 from above (already computed and converted if needed)
 for i in range(N):
-      # OPTIMIZED: Extract sparse row and find non-zero elements
-      row = matrix2.getrow(i).toarray().flatten()
+      # Handle both dense and sparse matrices
+      if sparse.issparse(matrix2):
+        row = matrix2.getrow(i).toarray().flatten()
+      else:
+        row = matrix2[i,:]
       neighbors_with_sharing = np.argwhere(row > P)  # 2 => 1 shared neighbors, 3=>2, etc.
       if not i in neighbors_with_sharing:
         # Extract indices - handle both 1D and 2D results from argwhere
@@ -1502,10 +1511,15 @@ for P in P_list:
     elif P>5:cluster_size=4
     elif P>=2:cluster_size=3
     #else:cluster_size=2 
-    if P>0:        
+    if P>0:
       flag_new_peaks=0
       for i in range(N):
-        neighbors_with_sharing=np.argwhere(matrix2[i,:]>=P)
+        # Handle both dense and sparse matrices
+        if sparse.issparse(matrix2):
+          row = matrix2.getrow(i).toarray().flatten()
+          neighbors_with_sharing = np.argwhere(row >= P)
+        else:
+          neighbors_with_sharing = np.argwhere(matrix2[i,:] >= P)
         if not i in neighbors_with_sharing:
           # Extract indices - handle both 1D and 2D results from argwhere
           if neighbors_with_sharing.ndim == 2 and neighbors_with_sharing.shape[1] > 0:
