@@ -1,0 +1,25 @@
+############ Input ###########
+##2d HMQC:
+new_hmqc_gem.list
+##3d NOESY:
+cCH_49-255_new.list
+##PDB:
+abl1-255no65.pdb
+##SEQ:
+seq.auto
+##labeling:
+I,CD1;L,CD1,CD2;V,CG1,CG2;A
+############ parameters ###########
+##stereospecific=2;double methyl=1;mono-methyl=0:
+1
+##ppm tolerance (13C,13C,1H):
+0.1 0.1 0.01
+##score threshold factor:
+1
+##Distance threshold:
+7 10
+##Score tolerance for one-by-one step (off or on):
+off
+##Area of expected conformational changes:
+
+############END

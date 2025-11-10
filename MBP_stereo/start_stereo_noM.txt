@@ -1,0 +1,25 @@
+############ Input ###########
+##2d reference spectrum:
+new_new_MBP_hmqc_stereo_M.list
+##3d NOESY:
+MBP_cch_IMLsVs_choppedL361_392p.list
+##pdb:
+1DMB_choppedL361.pdb
+##SEQ:
+seq.auto
+##labeling:
+I,CD1;L,CD2;V,CG2;M
+############ parameters ###########
+##stereospecific=2;double methyl=1;mono-methyl=0:
+2
+##ppm tolerance (13C,13C,1H):
+0.1 0.1 0.01
+##score threshold factor:
+1
+##Distance threshold:
+7 10
+##Score tolerance for one-by-one step (off or on):
+off
+##Area of expected conformational changes:
+
+151-163;176-204;340-360
