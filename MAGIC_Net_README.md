@@ -4,9 +4,10 @@ e-mail: mary.clay@stjude.org
 St Jude Children's Research Hospital
 Department of Structural Biology Memphis, TN
 
-# 1. Dependancies
-This code was developed using python2.7.18 with the following packages installed:
-  panas == 0.24.2
-  numpy == 1.16.6
-  matplotlib == 2.2.5
-  seaborn == 0.9.1
+# 1. Dependencies
+This code has been migrated to Python 3.12+ with the following packages:
+  pandas >= 1.5.0
+  numpy >= 1.23.0
+  matplotlib >= 3.5.0
+  seaborn >= 0.12.0
+  scipy >= 1.9.0 (for sparse matrix optimizations)

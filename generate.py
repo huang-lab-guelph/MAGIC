@@ -96,24 +96,39 @@ sdTc=1.11
 muTh=1.14
 muTc=21.55
 
-peak_type=np.zeros((len(HMQC),6))
-for i in range(len(HMQC)):
-  line=HMQC[i]
-  Wh=float(line.split()[2])
-  Wc=float(line.split()[1])
-  PA,PI,PL,PV,PM,PT=0,0,0,0,0,0
-  if 'A' in labeling:PA=round(m.exp(-((m.pow((Wc-muAc),2)/(2*m.pow(sdAc,2)))+(m.pow((Wh-muAh),2)/(2*m.pow(sdAh,2))))),5)
-  if 'I' in labeling:PI=round(m.exp(-((m.pow((Wc-muIc),2)/(2*m.pow(sdIc,2)))+(m.pow((Wh-muIh),2)/(2*m.pow(sdIh,2))))),5)
-  if 'L' in labeling:PL=round(m.exp(-((m.pow((Wc-muLc),2)/(2*m.pow(sdLc,2)))+(m.pow((Wh-muLh),2)/(2*m.pow(sdLh,2))))),5)
-  if 'V' in labeling:PV=round(m.exp(-((m.pow((Wc-muVc),2)/(2*m.pow(sdVc,2)))+(m.pow((Wh-muVh),2)/(2*m.pow(sdVh,2))))),5)
-  if 'M' in labeling:PM=round(m.exp(-((m.pow((Wc-muMc),2)/(2*m.pow(sdMc,2)))+(m.pow((Wh-muMh),2)/(2*m.pow(sdMh,2))))),5)
-  if 'T' in labeling:PT=round(m.exp(-((m.pow((Wc-muTc),2)/(2*m.pow(sdTc,2)))+(m.pow((Wh-muTh),2)/(2*m.pow(sdTh,2))))),5) 
-  peak_type[i,0]=PA
-  peak_type[i,1]=PI
-  peak_type[i,2]=PL
-  peak_type[i,3]=PV
-  peak_type[i,4]=PM
-  peak_type[i,5]=PT
+# OPTIMIZED: Vectorized probability calculations
+peak_type = np.zeros((len(HMQC), 6))
+
+# Extract all Wh and Wc values at once
+Wh_values = np.array([float(line.split()[2]) for line in HMQC])
+Wc_values = np.array([float(line.split()[1]) for line in HMQC])
+
+# Set up mean and std arrays for each amino acid type
+mu_c = np.array([muAc, muIc, muLc, muVc, muMc, muTc])
+mu_h = np.array([muAh, muIh, muLh, muVh, muMh, muTh])
+sd_c = np.array([sdAc, sdIc, sdLc, sdVc, sdMc, sdTc])
+sd_h = np.array([sdAh, sdIh, sdLh, sdVh, sdMh, sdTh])
+
+# Compute probabilities for all peaks and all amino acid types at once
+# Broadcasting: (n_peaks, 1) - (6,) = (n_peaks, 6)
+Wc_expanded = Wc_values[:, np.newaxis]  # Shape: (n_peaks, 1)
+Wh_expanded = Wh_values[:, np.newaxis]  # Shape: (n_peaks, 1)
+
+# Compute Gaussian probabilities for all combinations
+prob_c = (Wc_expanded - mu_c) ** 2 / (2 * sd_c ** 2)
+prob_h = (Wh_expanded - mu_h) ** 2 / (2 * sd_h ** 2)
+peak_type_all = np.exp(-(prob_c + prob_h))
+
+# Apply rounding
+peak_type_all = np.round(peak_type_all, 5)
+
+# Zero out probabilities for amino acids not in labeling
+if 'A' in labeling: peak_type[:, 0] = peak_type_all[:, 0]
+if 'I' in labeling: peak_type[:, 1] = peak_type_all[:, 1]
+if 'L' in labeling: peak_type[:, 2] = peak_type_all[:, 2]
+if 'V' in labeling: peak_type[:, 3] = peak_type_all[:, 3]
+if 'M' in labeling: peak_type[:, 4] = peak_type_all[:, 4]
+if 'T' in labeling: peak_type[:, 5] = peak_type_all[:, 5]
 HMQC_newfile=open('./new_'+str(sys.argv[1]),'w', encoding='utf-8')
 tot_0=0
 tot_1=0

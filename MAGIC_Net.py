@@ -128,17 +128,37 @@ LV_entries = []
 ## Generates a dictionary All_PDB_entries[methyl] = [(methyl, type, atom, x, y, z)]
 ###---------------------------------------------------------------------------
 
+# OPTIMIZED: Pre-compile patterns and use sets for membership tests
+AAA_dict_keys = set(AAA_dict.keys())
+Labeled_keys = set(Labeled.keys())
+LV_set = {'L', 'V'}
+
 with open(pdb_name, 'r', encoding='utf-8') as pdb_file:
     for line in pdb_file:
-        if line[0:4] == "ATOM" or line[0:4] == 'HETA':
-            if line[17:20].strip() in list(AAA_dict.keys()):
-                if line[12:16].strip() == 'CA':
-                    SEQ.append(AAA_dict[line[17:20].strip()])
-                if AAA_dict[line[17:20].strip()] in list(Labeled.keys()) and line[12:16].strip() in Labeled[AAA_dict[line[17:20].strip()]]:
-                    methyl = AAA_dict[line[17:20].strip()] + line[22:26].strip() + '-' + line[12:16].strip()
-                    All_PDB_entries[methyl] =[methyl,AAA_dict[line[17:20].strip()], line[12:16].strip(), float(line[30:38]), float(line[38:46]), float(line[46:54])]
+        # Parse line fields once
+        line_start = line[0:4]
+        if line_start == "ATOM" or line_start == 'HETA':
+            residue_name = line[17:20].strip()
+            if residue_name in AAA_dict_keys:
+                atom_name = line[12:16].strip()
+                aa_code = AAA_dict[residue_name]
+
+                if atom_name == 'CA':
+                    SEQ.append(aa_code)
+
+                if aa_code in Labeled_keys and atom_name in Labeled[aa_code]:
+                    residue_num = line[22:26].strip()
+                    methyl = aa_code + residue_num + '-' + atom_name
+
+                    # Parse coordinates once
+                    x = float(line[30:38])
+                    y = float(line[38:46])
+                    z = float(line[46:54])
+
+                    All_PDB_entries[methyl] = [methyl, aa_code, atom_name, x, y, z]
                     PDB_entries.append(methyl)
-                    if methyl[0] in ['L','V']: LV_entries.append(methyl)
+                    if aa_code in LV_set:
+                        LV_entries.append(methyl)
 
 protonsDF = pd.DataFrame(index=LV_Labeling)
 

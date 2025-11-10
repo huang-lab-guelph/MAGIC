@@ -14,8 +14,9 @@ from random import shuffle
 from scipy.spatial.distance import cdist
 from scipy.spatial import cKDTree  # OPTIMIZED: For efficient spatial range queries
 from scipy import sparse  # OPTIMIZED: Added for sparse matrix operations
-from collections import Counter
+from collections import Counter, defaultdict
 from functools import lru_cache  # OPTIMIZED: Added for result caching
+from concurrent.futures import ThreadPoolExecutor  # OPTIMIZED: For concurrent file I/O
 
 # Pre-compile regex patterns for performance
 RESIDUE_PATTERN = re.compile(r'[A-Z]([0-9]+)[A-Z]')
@@ -45,14 +46,21 @@ def sparse_submatrix(matrix, row_indices, col_indices):
         # For dense matrices, use standard indexing
         return matrix[np.ix_(row_indices, col_indices)]
 
-# OPTIMIZED: Matrix operation cache for frequently accessed submatrices
+# OPTIMIZED: Enhanced matrix cache with adaptive sizing and LRU eviction
+from collections import OrderedDict
+
 class MatrixCache:
-    """Cache for matrix submatrix operations to avoid recomputation."""
-    def __init__(self, max_size=1000):
-        self.cache = {}
+    """Adaptive cache for matrix submatrix operations with LRU eviction."""
+    def __init__(self, initial_size=500, min_size=100, max_size=5000):
+        self.cache = OrderedDict()  # Maintains insertion order for LRU
+        self.current_max_size = initial_size
+        self.min_size = min_size
         self.max_size = max_size
         self.hits = 0
         self.misses = 0
+        self.access_count = 0
+        self.last_resize_check = 0
+        self.resize_interval = 1000  # Check for resize every N accesses
 
     def get_key(self, matrix_id, row_indices, col_indices):
         """Generate cache key from matrix ID and indices."""
@@ -61,34 +69,81 @@ class MatrixCache:
         return (matrix_id, row_tuple, col_tuple)
 
     def get(self, matrix_id, row_indices, col_indices):
-        """Get cached submatrix if available."""
+        """Get cached submatrix if available (LRU)."""
         key = self.get_key(matrix_id, row_indices, col_indices)
+        self.access_count += 1
+
         if key in self.cache:
             self.hits += 1
+            # Move to end (most recently used)
+            self.cache.move_to_end(key)
+            self._check_adaptive_resize()
             return self.cache[key]
+
         self.misses += 1
+        self._check_adaptive_resize()
         return None
 
     def put(self, matrix_id, row_indices, col_indices, submatrix):
-        """Cache a submatrix result."""
-        # If cache is full, remove oldest entries (simple FIFO)
-        if len(self.cache) >= self.max_size:
-            # Remove 20% of oldest entries
-            keys_to_remove = list(self.cache.keys())[:self.max_size // 5]
-            for key in keys_to_remove:
-                del self.cache[key]
-
+        """Cache a submatrix result with LRU eviction."""
         key = self.get_key(matrix_id, row_indices, col_indices)
+
+        # If key exists, update and move to end
+        if key in self.cache:
+            self.cache.move_to_end(key)
+            self.cache[key] = submatrix
+            return
+
+        # If cache is full, remove least recently used
+        if len(self.cache) >= self.current_max_size:
+            # Remove LRU item (first item in OrderedDict)
+            self.cache.popitem(last=False)
+
         self.cache[key] = submatrix
 
+    def _check_adaptive_resize(self):
+        """Adaptively resize cache based on hit rate."""
+        if self.access_count - self.last_resize_check < self.resize_interval:
+            return
+
+        self.last_resize_check = self.access_count
+        hit_rate = self.hits / max(self.hits + self.misses, 1)
+
+        # Adjust cache size based on hit rate
+        if hit_rate > 0.8 and self.current_max_size < self.max_size:
+            # High hit rate - increase cache size
+            new_size = min(int(self.current_max_size * 1.5), self.max_size)
+            self.current_max_size = new_size
+        elif hit_rate < 0.3 and self.current_max_size > self.min_size:
+            # Low hit rate - decrease cache size to save memory
+            new_size = max(int(self.current_max_size * 0.7), self.min_size)
+            # Evict excess items if needed
+            while len(self.cache) > new_size:
+                self.cache.popitem(last=False)
+            self.current_max_size = new_size
+
     def clear(self):
-        """Clear the cache."""
+        """Clear the cache and reset statistics."""
         self.cache.clear()
         self.hits = 0
         self.misses = 0
+        self.access_count = 0
+        self.last_resize_check = 0
 
-# Global matrix cache instance
-_matrix_cache = MatrixCache(max_size=500)
+    def get_stats(self):
+        """Return cache statistics."""
+        hit_rate = self.hits / max(self.hits + self.misses, 1)
+        return {
+            'hits': self.hits,
+            'misses': self.misses,
+            'hit_rate': hit_rate,
+            'current_size': len(self.cache),
+            'max_size': self.current_max_size
+        }
+
+# Global matrix cache instance with adaptive sizing
+# Adjusts size based on dataset: small (100-500), medium (500-2000), large (2000-5000)
+_matrix_cache = MatrixCache(initial_size=500, min_size=100, max_size=5000)
 
 def sparse_submatrix_cached(matrix, matrix_id, row_indices, col_indices):
     """
@@ -330,6 +385,9 @@ def matrix_it(links, element_list, flag, factors,geminal_mark):
   n = len(element_list)
   matrix = sparse.lil_matrix((n, n))
 
+  # OPTIMIZED: Create O(1) lookup dictionary for element indices
+  element_index = {element: idx for idx, element in enumerate(element_list)}
+
   if flag=='peak':
     matrix_scoring = sparse.lil_matrix((n, n))
     peak_geminal = sparse.lil_matrix((n, n))
@@ -339,8 +397,8 @@ def matrix_it(links, element_list, flag, factors,geminal_mark):
     matrix_geminal = sparse.lil_matrix((n, n))
 
   for line in links:
-    i=element_list.index(line[0])
-    j=element_list.index(line[1])
+    i=element_index[line[0]]
+    j=element_index[line[1]]
     if flag=='peak':matrix[i,i]=1
     if flag=='pdb':
       matrix[i,j]=line[2]
@@ -363,8 +421,8 @@ def matrix_it(links, element_list, flag, factors,geminal_mark):
   if flag=='peak':
     matrix_ri = sparse.lil_matrix((n, n))
     for line in links:
-      i=element_list.index(line[0])
-      j=element_list.index(line[1])
+      i=element_index[line[0]]
+      j=element_index[line[1]]
       chi=float(line[6])
       matrix_ri[i,j]=float(line[2])
       matrix_scoring[i,j]=float(line[7])*math.pow(math.pow(1+float(line[5]),2)/(20*chi*math.pow(float(line[3]),2)),0.5)
@@ -1623,38 +1681,60 @@ for P in P_list:
           number_of_pool=len(list_of_assignment_index)//cpu
           number_of_pool_rest=len(list_of_assignment_index)%cpu
           number_of_files=0
-          # OPTIMIZED: Create pool once and reuse
-          with mp.Pool(processes=cpu) as pool:
-            for i in range(number_of_pool):
-              pool_result=pool.map(build_assignment_peak, list_of_assignment_index[cpu*i:cpu*(i+1)])
 
-              for j in range(len(pool_result)):
-                if  pool_result[j][1]>highest_score_small:highest_score_small=pool_result[j][1]
-              assignments_table=[]
-              for j in range(len(pool_result)):
-                if len(pool_result[j][0])!=0:assignments_table.append(pool_result[j][0])
-              pool_result=[]
-              if len(assignments_table)!=0:
-                with open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_'+str(number_of_files), 'wb') as file:
+          # OPTIMIZED: Skip multiprocessing overhead for small datasets
+          MULTIPROCESSING_THRESHOLD = 50  # Process serially if fewer assignments
+          if len(list_of_assignment_index) < MULTIPROCESSING_THRESHOLD:
+            # Process serially for small datasets
+            pool_result = []
+            for idx in list_of_assignment_index:
+              pool_result.append(build_assignment_peak(idx))
+
+            for j in range(len(pool_result)):
+              if pool_result[j][1] > highest_score_small:
+                highest_score_small = pool_result[j][1]
+
+            assignments_table = []
+            for j in range(len(pool_result)):
+              if len(pool_result[j][0]) != 0:
+                assignments_table.append(pool_result[j][0])
+
+            if len(assignments_table) != 0:
+              with open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_0', 'wb') as file:
+                pickle.dump(assignments_table, file, protocol=pickle.HIGHEST_PROTOCOL)
+          else:
+            # OPTIMIZED: Create pool once and reuse for larger datasets
+            with mp.Pool(processes=cpu) as pool:
+              for i in range(number_of_pool):
+                pool_result=pool.map(build_assignment_peak, list_of_assignment_index[cpu*i:cpu*(i+1)])
+
+                for j in range(len(pool_result)):
+                  if  pool_result[j][1]>highest_score_small:highest_score_small=pool_result[j][1]
+                assignments_table=[]
+                for j in range(len(pool_result)):
+                  if len(pool_result[j][0])!=0:assignments_table.append(pool_result[j][0])
+                pool_result=[]
+                if len(assignments_table)!=0:
+                  with open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_'+str(number_of_files), 'wb') as file:
+                    pickle.dump(assignments_table,file,protocol=pickle.HIGHEST_PROTOCOL)
+                  assignments_table=[]
+                  number_of_files+=1
+              if number_of_pool_rest!=0:
+                pool_result=pool.map(build_assignment_peak, list_of_assignment_index[number_of_pool*cpu:])
+
+                for j in range(len(pool_result)):
+                  if  pool_result[j][1]>highest_score_small:highest_score_small=pool_result[j][1]
+                assignments_table=[]
+                for j in range(len(pool_result)):
+                  if len(pool_result[j][0])!=0:assignments_table.append(pool_result[j][0])
+                pool_result=[]
+
+                if len(assignments_table)!=0:
+                  file=open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_'+str(number_of_files), 'wb')
                   pickle.dump(assignments_table,file,protocol=pickle.HIGHEST_PROTOCOL)
-                assignments_table=[]
-                number_of_files+=1
-            if number_of_pool_rest!=0:
-              pool_result=pool.map(build_assignment_peak, list_of_assignment_index[number_of_pool*cpu:])
-              
-              for j in range(len(pool_result)):
-                if  pool_result[j][1]>highest_score_small:highest_score_small=pool_result[j][1]
-              assignments_table=[]
-              for j in range(len(pool_result)):
-                if len(pool_result[j][0])!=0:assignments_table.append(pool_result[j][0])
-              pool_result=[]
-
-              if len(assignments_table)!=0:
-                file=open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/temp_'+str(number_of_files), 'wb')
-                pickle.dump(assignments_table,file,protocol=pickle.HIGHEST_PROTOCOL)
-                file.close()
-                assignments_table=[]
-                number_of_files+=1
+                  file.close()
+                  assignments_table=[]
+                  number_of_files+=1
           ##################### Multi-processed assignment building ####################  
           number_peaks=len(assignment_archive_old[0][0])+1
           if number_peaks<=2:q=0           
@@ -1668,34 +1748,48 @@ for P in P_list:
           tot=0
           deleted=0
         
-          assignment_archive=[]
-          list_of_files=os.listdir('./'+str(Time_start).split('.')[0]+'/run/Local/temp/')
-          for i in range(len(list_of_files)):
-              file=open('./'+str(Time_start).split('.')[0]+'/run/Local/temp/'+str(list_of_files[i]), 'rb')
-              element=pickle.load(file)
-              file.close()
+          # OPTIMIZED: Concurrent file I/O for faster aggregation
+          assignment_archive = []
+          temp_dir = './'+str(Time_start).split('.')[0]+'/run/Local/temp/'
+          list_of_files = os.listdir(temp_dir)
+
+          def load_and_filter_file(filename):
+              """Load a pickle file and filter assignments by cutoff."""
+              filepath = temp_dir + filename
+              with open(filepath, 'rb') as file:
+                  element = pickle.load(file)
+
+              filtered_assignments = []
+              local_tot = 0
               for j in range(len(element)):
-                for k in range(len(element[j])):
-                  tot+=1
-                  if element[j][k][2]>=cutoff:assignment_archive.append(element[j][k])
-              os.remove('./'+str(Time_start).split('.')[0]+'/run/Local/temp/'+str(list_of_files[i]))  
+                  for k in range(len(element[j])):
+                      local_tot += 1
+                      if element[j][k][2] >= cutoff:
+                          filtered_assignments.append(element[j][k])
+
+              os.remove(filepath)
+              return filtered_assignments, local_tot
+
+          # Use ThreadPoolExecutor for concurrent file I/O
+          with ThreadPoolExecutor(max_workers=min(len(list_of_files), 8)) as executor:
+              results = list(executor.map(load_and_filter_file, list_of_files))
+
+          # Aggregate results
+          for filtered_assignments, local_tot in results:
+              tot += local_tot
+              assignment_archive.extend(filtered_assignments)  
           deleted=tot-len(assignment_archive)+1
         
-          archive_assignment_cluster={}
+          # OPTIMIZED: Use defaultdict to eliminate existence checks
+          archive_assignment_cluster = defaultdict(lambda: defaultdict(float))
           for i in range(len(assignment_archive)):
             for j in range(len(assignment_archive[i][0])):
               peak=HMQC_peak_list[assignment_archive[i][0][j]]
               methyl=metrics[2][assignment_archive[i][1][j]]
-              if peak not in archive_assignment_cluster:
-                archive_assignment_cluster[peak]={}
-                archive_assignment_cluster[peak][methyl]=assignment_archive[i][2]
-              else:
-                if methyl not in archive_assignment_cluster[peak]:
-                  archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
-                elif (methyl in archive_assignment_cluster[peak] and
-                      archive_assignment_cluster[peak][methyl]<assignment_archive[i][2]):
-                  archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
-                else:pass
+              score = round(assignment_archive[i][2], 3)
+              # Only update if new score is better
+              if archive_assignment_cluster[peak][methyl] < score:
+                archive_assignment_cluster[peak][methyl] = score
           setattr(result, str(list_peak[name_peak_index])+'_possible_peak_assignments',archive_assignment_cluster)
         
           report=open('./'+str(Time_start).split('.')[0]+'/run/Local/'+str(P)+'_cp#'+str(list_peak[name_peak_index]), 'w')        

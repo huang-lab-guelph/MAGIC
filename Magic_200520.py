@@ -12,6 +12,7 @@ import resource
 import psutil
 from random import shuffle
 from operator import itemgetter, attrgetter, methodcaller
+from collections import defaultdict
 
 class obj:pass
 result=obj()    
@@ -207,14 +208,18 @@ def Extract_3DPeaks(object, peak_list_noesy, peak_list_2d_CH):
 def matrix_it(links, element_list, flag, factors,geminal_mark,overlap_topo):
   N=len(element_list)
   matrix=np.zeros((N,N))
+
+  # OPTIMIZED: Create O(1) lookup dictionary for element indices
+  element_index = {element: idx for idx, element in enumerate(element_list)}
+
   if flag=='peak':
     matrix_scoring=np.zeros((N,N))
-    peak_geminal=np.zeros((N,N))  
+    peak_geminal=np.zeros((N,N))
     for entry in geminal_mark:peak_geminal[entry[0],entry[1]]=1
   if flag=='pdb':matrix_geminal=np.zeros((N,N))
   for line in links:
-    i=element_list.index(line[0])
-    j=element_list.index(line[1])
+    i=element_index[line[0]]
+    j=element_index[line[1]]
     #if flag=='peak':matrix[i,i]=1    
     if flag=='pdb':
       matrix[i,j]=line[2]
@@ -239,8 +244,8 @@ def matrix_it(links, element_list, flag, factors,geminal_mark,overlap_topo):
   if flag=='peak':
     matrix_ri=np.zeros((N,N))
     for line in links:
-      i=element_list.index(line[0])
-      j=element_list.index(line[1])
+      i=element_index[line[0]]
+      j=element_index[line[1]]
       chi=float(line[6])
       matrix_ri[i,j]=float(line[2])
       matrix_scoring[i,j]=float(line[7])*math.pow(math.pow(1+float(line[5]),2)/(20*chi*math.pow(float(line[3]),2)),0.5)
@@ -1336,21 +1341,16 @@ for name_peak in list_peak:
 
       report=open('./'+directory+'/run/Local/c#'+str(name_peak)+'_P='+str(P), 'w')
            
-      archive_assignment_cluster={}
+      # OPTIMIZED: Use defaultdict to eliminate existence checks
+      archive_assignment_cluster = defaultdict(lambda: defaultdict(float))
       for i in range(len(assignment_archive)):
           for j in range(len(assignment_archive[i][0])):
             peak=HMQC_peak_list[assignment_archive[i][0][j]]
             methyl=metrics[2][assignment_archive[i][1][j]]
-            if not peak in list(archive_assignment_cluster.keys()):
-              archive_assignment_cluster[peak]={}
-              archive_assignment_cluster[peak][methyl]=assignment_archive[i][2]
-            else:
-              if not methyl in list(archive_assignment_cluster[peak].keys()):
-                archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
-              elif (methyl in list(archive_assignment_cluster[peak].keys()) and
-                    archive_assignment_cluster[peak][methyl]<assignment_archive[i][2]):
-                archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
-              else:pass   
+            score = round(assignment_archive[i][2], 3)
+            # Only update if new score is better
+            if archive_assignment_cluster[peak][methyl] < score:
+              archive_assignment_cluster[peak][methyl] = score   
       setattr(result, str(name_peak)+'_possible_peak_assignments',archive_assignment_cluster)             
 
       score_index=np.zeros((2,len(assignment_archive)))      
@@ -1590,21 +1590,16 @@ for P in P_list:
               os.remove('./'+directory+'/run/Local/temp/'+str(list_of_files[i]))  
           deleted=tot-len(assignment_archive)+1
         
-          archive_assignment_cluster={}
+          # OPTIMIZED: Use defaultdict to eliminate existence checks
+          archive_assignment_cluster = defaultdict(lambda: defaultdict(float))
           for i in range(len(assignment_archive)):
             for j in range(len(assignment_archive[i][0])):
               peak=HMQC_peak_list[assignment_archive[i][0][j]]
               methyl=metrics[2][assignment_archive[i][1][j]]
-              if not peak in list(archive_assignment_cluster.keys()):
-                archive_assignment_cluster[peak]={}
-                archive_assignment_cluster[peak][methyl]=assignment_archive[i][2]
-              else:
-                if not methyl in list(archive_assignment_cluster[peak].keys()):
-                  archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
-                elif (methyl in list(archive_assignment_cluster[peak].keys()) and
-                      archive_assignment_cluster[peak][methyl]<assignment_archive[i][2]):
-                  archive_assignment_cluster[peak][methyl]=round(assignment_archive[i][2],3)
-                else:pass
+              score = round(assignment_archive[i][2], 3)
+              # Only update if new score is better
+              if archive_assignment_cluster[peak][methyl] < score:
+                archive_assignment_cluster[peak][methyl] = score
           setattr(result, str(list_peak[name_peak_index])+'_possible_peak_assignments',archive_assignment_cluster)
           
           report=open('./'+directory+'/run/Local/c#'+str(peak_index)+'_P='+str(round(P,2)), 'w')        
